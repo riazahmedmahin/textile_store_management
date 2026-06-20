@@ -1,0 +1,57 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom
+.buildlog
+.history
+.project
+.settings
+.toolong
+.idea
+.vscode
+*.iml
+
+# Flutter/Dart/Pub-related
+**/doc/api/
+**/ios/Flutter/.ios/
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/GeneratedPluginRegistrant.h
+**/ios/Flutter/GeneratedPluginRegistrant.m
+**/ios/Flutter/GeneratedPluginRegistrant.swift
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Flutter.app
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/tmp
+**/android/local.properties
+**/android/key.properties
+**/android/app/google-services.json
+**/android/.gradle
+**/android/build
+**/android/app/build
+**/android/captures
+**/android/gradle-local.properties
+**/android/gradle/
+**/android/.cxx
+**/android/.externalNativeBuild
+**/.analytics
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+/build/
+
+# Symbol files
+**/*.so
+**/*.dill
+**/*.ipa
+**/*.apk
+**/*.ap_
+**/*.aab
+
+# Web-related
+.extracted_artifacts/
