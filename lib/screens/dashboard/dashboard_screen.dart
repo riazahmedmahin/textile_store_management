@@ -25,6 +25,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
+
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
@@ -32,20 +34,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _buildTopBar(),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildStatsRow(),
                   const SizedBox(height: 24),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 3, child: _buildRecentActivity()),
-                      const SizedBox(width: 20),
-                      Expanded(flex: 2, child: _buildSectionSummary()),
-                    ],
-                  ),
+                  if (isMobile) ...[
+                    _buildRecentActivity(),
+                    const SizedBox(height: 20),
+                    _buildSectionSummary(),
+                  ] else ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: _buildRecentActivity()),
+                        const SizedBox(width: 20),
+                        Expanded(flex: 2, child: _buildSectionSummary()),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -103,15 +111,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final productCount = stats['product_count'] ?? 0;
         final totalIn = (stats['total_in'] as num?)?.toDouble() ?? 0;
         final totalOut = (stats['total_out'] as num?)?.toDouble() ?? 0;
-        final netStock = totalIn - totalOut;
+
+        final double width = MediaQuery.of(context).size.width;
+        int crossAxisCount = 4;
+        double childAspectRatio = 1.8;
+        if (width < 600) {
+          crossAxisCount = 1;
+          childAspectRatio = 3.2;
+        } else if (width < 950) {
+          crossAxisCount = 2;
+          childAspectRatio = 2.0;
+        }
 
         return GridView.count(
-          crossAxisCount: 4,
+          crossAxisCount: crossAxisCount,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.8,
+          childAspectRatio: childAspectRatio,
           children: [
             _StatCard(
               label: 'Total Sections',

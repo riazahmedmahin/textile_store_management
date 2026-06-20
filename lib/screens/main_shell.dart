@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/section_provider.dart';
 import '../providers/stock_provider.dart';
 import '../core/theme/app_theme.dart';
@@ -34,6 +35,8 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    final auth = context.read<AuthProvider>();
+    _currentView = auth.role == 'store' ? AppView.store : AppView.admin;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SectionProvider>().loadSections();
       context.read<StockProvider>().loadDashboardStats();
@@ -61,21 +64,88 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
+    final auth = context.watch<AuthProvider>();
+    final showViewSwitcher = auth.role == 'admin';
+
+    Widget sidebarWidget = _Sidebar(
+      currentIndex: _currentIndex,
+      currentView: _currentView,
+      navItems: _navItems,
+      showViewSwitcher: showViewSwitcher,
+      onIndexChanged: (i) => setState(() => _currentIndex = i),
+      onViewChanged: (v) => setState(() {
+        _currentView = v;
+        _currentIndex = 0;
+      }),
+    );
+
+    if (isMobile) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF818CF8), Color(0xFF6366F1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                _currentView == AppView.admin ? 'StitchOS — Admin' : 'StitchOS — Store',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          elevation: 1,
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu_rounded),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
+        ),
+        drawer: Drawer(
+          child: sidebarWidget,
+        ),
+        body: _currentScreen(),
+        bottomNavigationBar: _currentView == AppView.admin
+            ? BottomNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: (i) => setState(() => _currentIndex = i),
+                selectedItemColor: AppTheme.primary,
+                unselectedItemColor: AppTheme.textMuted,
+                showUnselectedLabels: true,
+                selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                unselectedLabelStyle: const TextStyle(fontSize: 12),
+                elevation: 8,
+                items: _adminNavItems.map((item) {
+                  return BottomNavigationBarItem(
+                    icon: Icon(item.icon),
+                    activeIcon: Icon(item.activeIcon),
+                    label: item.label,
+                  );
+                }).toList(),
+              )
+            : null,
+      );
+    }
+
     return Scaffold(
       body: Row(
         children: [
-          // ── Sidebar ──────────────────────────────────────────────────────
-          _Sidebar(
-            currentIndex: _currentIndex,
-            currentView: _currentView,
-            navItems: _navItems,
-            onIndexChanged: (i) => setState(() => _currentIndex = i),
-            onViewChanged: (v) => setState(() {
-              _currentView = v;
-              _currentIndex = 0;
-            }),
-          ),
-          // ── Main Content ─────────────────────────────────────────────────
+          sidebarWidget,
           Expanded(
             child: _currentScreen(),
           ),
@@ -91,6 +161,7 @@ class _Sidebar extends StatelessWidget {
   final int currentIndex;
   final AppView currentView;
   final List<_NavItem> navItems;
+  final bool showViewSwitcher;
   final ValueChanged<int> onIndexChanged;
   final ValueChanged<AppView> onViewChanged;
 
@@ -98,23 +169,18 @@ class _Sidebar extends StatelessWidget {
     required this.currentIndex,
     required this.currentView,
     required this.navItems,
+    required this.showViewSwitcher,
     required this.onIndexChanged,
     required this.onViewChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     return Container(
       width: 240,
       decoration: const BoxDecoration(
         color: AppTheme.bgSidebar,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x20000000),
-            blurRadius: 20,
-            offset: Offset(4, 0),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,33 +235,46 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
 
-          // View Switcher
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF312E81),
-                borderRadius: BorderRadius.circular(10),
+          // View Switcher (Only shown if showViewSwitcher is true)
+          if (showViewSwitcher)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF312E81),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  children: [
+                    _ViewTab(
+                      label: 'Admin',
+                      icon: Icons.admin_panel_settings_outlined,
+                      isSelected: currentView == AppView.admin,
+                      onTap: () {
+                        onViewChanged(AppView.admin);
+                        if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    _ViewTab(
+                      label: 'Store',
+                      icon: Icons.store_outlined,
+                      isSelected: currentView == AppView.store,
+                      onTap: () {
+                        onViewChanged(AppView.store);
+                        if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
-              padding: const EdgeInsets.all(4),
-              child: Row(
-                children: [
-                  _ViewTab(
-                    label: 'Admin',
-                    icon: Icons.admin_panel_settings_outlined,
-                    isSelected: currentView == AppView.admin,
-                    onTap: () => onViewChanged(AppView.admin),
-                  ),
-                  _ViewTab(
-                    label: 'Store',
-                    icon: Icons.store_outlined,
-                    isSelected: currentView == AppView.store,
-                    onTap: () => onViewChanged(AppView.store),
-                  ),
-                ],
-              ),
-            ),
-          ),
+            )
+          else
+            const SizedBox(height: 16),
 
           // Nav Section Label
           Padding(
@@ -219,13 +298,18 @@ class _Sidebar extends StatelessWidget {
             return _NavTile(
               item: item,
               isActive: isActive,
-              onTap: () => onIndexChanged(idx),
+              onTap: () {
+                onIndexChanged(idx);
+                if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+                  Navigator.pop(context);
+                }
+              },
             );
           }),
 
           const Spacer(),
 
-          // Footer
+          // Footer with User Details + Logout
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -248,9 +332,11 @@ class _Sidebar extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        currentView == AppView.admin ? 'Admin User' : 'Store User',
+                        auth.role == 'admin' ? 'Admin User' : 'Store User',
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
@@ -258,11 +344,25 @@ class _Sidebar extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        currentView == AppView.admin ? 'Full Access' : 'Entry Only',
-                        style: const TextStyle(color: Color(0xFF6366F1), fontSize: 11),
+                        auth.email ?? '',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Color(0xFF6366F1), fontSize: 10),
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                  onPressed: () {
+                    // Close drawer if open
+                    if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+                      Navigator.pop(context);
+                    }
+                    auth.logout();
+                  },
+                  tooltip: 'Logout',
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(6),
                 ),
               ],
             ),

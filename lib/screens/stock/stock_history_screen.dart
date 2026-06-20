@@ -129,7 +129,6 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
       ),
     );
   }
-
   Widget _buildSummaryBar(List<StockEntry> entries, double currentStock) {
     final totalIn =
         entries.where((e) => e.type == 'in').fold(0.0, (s, e) => s + e.quantity);
@@ -137,48 +136,52 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
         entries.where((e) => e.type == 'out').fold(0.0, (s, e) => s + e.quantity);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
         color: AppTheme.bgSurface,
         border: Border(bottom: BorderSide(color: AppTheme.border)),
       ),
-      child: Row(
-        children: [
-          _SummaryChip(
-            label: 'Opening',
-            value: widget.product.initialStock,
-            unit: widget.product.unit,
-            color: AppTheme.textSecondary,
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.add, size: 14, color: AppTheme.textMuted),
-          const SizedBox(width: 4),
-          _SummaryChip(
-            label: 'Total In',
-            value: totalIn,
-            unit: widget.product.unit,
-            color: AppTheme.success,
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.remove, size: 14, color: AppTheme.textMuted),
-          const SizedBox(width: 4),
-          _SummaryChip(
-            label: 'Total Out',
-            value: totalOut,
-            unit: widget.product.unit,
-            color: AppTheme.danger,
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.drag_handle, size: 14, color: AppTheme.textMuted),
-          const SizedBox(width: 4),
-          _SummaryChip(
-            label: 'Current',
-            value: currentStock,
-            unit: widget.product.unit,
-            color: AppTheme.primary,
-            bold: true,
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Row(
+          children: [
+            _SummaryChip(
+              label: 'Opening',
+              value: widget.product.initialStock,
+              unit: widget.product.unit,
+              color: AppTheme.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.add, size: 14, color: AppTheme.textMuted),
+            const SizedBox(width: 6),
+            _SummaryChip(
+              label: 'Total In',
+              value: totalIn,
+              unit: widget.product.unit,
+              color: AppTheme.success,
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.remove, size: 14, color: AppTheme.textMuted),
+            const SizedBox(width: 6),
+            _SummaryChip(
+              label: 'Total Out',
+              value: totalOut,
+              unit: widget.product.unit,
+              color: AppTheme.danger,
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.drag_handle, size: 14, color: AppTheme.textMuted),
+            const SizedBox(width: 6),
+            _SummaryChip(
+              label: 'Current',
+              value: currentStock,
+              unit: widget.product.unit,
+              color: AppTheme.primary,
+              bold: true,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -46,165 +46,58 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.bgPage,
-      body: Column(
+  Widget _buildTopBar(bool isMobile) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 16),
+      decoration: const BoxDecoration(
+        color: AppTheme.bgCard,
+        border: Border(bottom: BorderSide(color: AppTheme.border)),
+      ),
+      child: Row(
         children: [
-          // Top Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: const BoxDecoration(
-              color: AppTheme.bgCard,
-              border: Border(bottom: BorderSide(color: AppTheme.border)),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppTheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.secondary.withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppTheme.secondary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.secondary.withOpacity(0.3)),
+                const Icon(Icons.store_rounded,
+                    color: AppTheme.secondary, size: 16),
+                const SizedBox(width: 5),
+                Text(
+                  'STORE MODE',
+                  style: TextStyle(
+                    color: AppTheme.secondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.store_rounded,
-                          color: AppTheme.secondary, size: 16),
-                      const SizedBox(width: 5),
-                      Text(
-                        'STORE MODE',
-                        style: TextStyle(
-                          color: AppTheme.secondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Quick Stock Entry',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Record stock in or out quickly',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                    ),
-                  ],
                 ),
               ],
             ),
           ),
-
-          // Body
+          const SizedBox(width: 14),
           Expanded(
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Left Panel — Section & Product Picker
-                Container(
-                  width: 280,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.bgCard,
-                    border: Border(right: BorderSide(color: AppTheme.border)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-                        child: Text(
-                          'Select Section & Product',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      Expanded(
-                        child: Consumer<SectionProvider>(
-                          builder: (context, secProvider, _) {
-                            if (secProvider.isLoading) {
-                              return const Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2));
-                            }
-                            return ListView.builder(
-                              padding: const EdgeInsets.all(8),
-                              itemCount: secProvider.sections.length,
-                              itemBuilder: (ctx, i) {
-                                final sec = secProvider.sections[i];
-                                return _SectionExpansion(
-                                  section: sec,
-                                  selectedProduct: _selectedProduct,
-                                  onProductSelected: (p) {
-                                    setState(() {
-                                      _selectedSection = sec;
-                                      _selectedProduct = p;
-                                    });
-                                    context
-                                        .read<StockProvider>()
-                                        .loadEntriesForProduct(p.id!, p.initialStock);
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                Text(
+                  'Quick Stock Entry',
+                  style: TextStyle(
+                    fontSize: isMobile ? 18 : 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
-
-                // Right Panel — Entry Form
-                Expanded(
-                  child: _selectedProduct == null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary.withOpacity(0.06),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Icon(Icons.touch_app_outlined,
-                                    color: AppTheme.primary, size: 36),
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Select a product',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Choose a section and product from the left panel',
-                                style: TextStyle(
-                                    color: AppTheme.textMuted, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _buildEntryForm(),
-                ),
+                if (!isMobile)
+                  const Text(
+                    'Record stock in or out quickly',
+                    style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                  ),
               ],
             ),
           ),
@@ -213,9 +106,161 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
     );
   }
 
-  Widget _buildEntryForm() {
+  Widget _buildPickerList() {
+    return Consumer<SectionProvider>(
+      builder: (context, secProvider, _) {
+        if (secProvider.isLoading) {
+          return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(8),
+          itemCount: secProvider.sections.length,
+          itemBuilder: (ctx, i) {
+            final sec = secProvider.sections[i];
+            return _SectionExpansion(
+              section: sec,
+              selectedProduct: _selectedProduct,
+              onProductSelected: (p) {
+                setState(() {
+                  _selectedSection = sec;
+                  _selectedProduct = p;
+                });
+                context
+                    .read<StockProvider>()
+                    .loadEntriesForProduct(p.id!, p.initialStock);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopPicker() {
+    return Container(
+      width: 280,
+      decoration: const BoxDecoration(
+        color: AppTheme.bgCard,
+        border: Border(right: BorderSide(color: AppTheme.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+            child: Text(
+              'Select Section & Product',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _buildPickerList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobilePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Text(
+            'Select Section & Product to continue',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _buildPickerList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.touch_app_outlined,
+                color: AppTheme.primary, size: 36),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Select a product',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Choose a section and product from the left panel',
+            style: TextStyle(
+                color: AppTheme.textMuted, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    return Scaffold(
+      backgroundColor: AppTheme.bgPage,
+      body: Column(
+        children: [
+          _buildTopBar(isMobile),
+
+          // Body
+          Expanded(
+            child: isMobile
+                ? (_selectedProduct == null
+                    ? _buildMobilePicker()
+                    : _buildEntryForm(true))
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDesktopPicker(),
+                      Expanded(
+                        child: _selectedProduct == null
+                            ? _buildEmptyState()
+                            : _buildEntryForm(false),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEntryForm(bool isMobile) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isMobile ? 16 : 28),
       child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 520),
@@ -224,6 +269,18 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (isMobile) ...[
+                  TextButton.icon(
+                    onPressed: () => setState(() => _selectedProduct = null),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                    label: const Text('Back to Product List'),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 // Product Info
                 Container(
                   padding: const EdgeInsets.all(16),

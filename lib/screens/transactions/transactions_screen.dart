@@ -49,126 +49,310 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       _fromDate != null ||
       _toDate != null;
 
+  Widget _buildTopBar(bool isMobile) {
+    if (isMobile) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        decoration: const BoxDecoration(
+          color: AppTheme.bgCard,
+          border: Border(bottom: BorderSide(color: AppTheme.border)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Transactions',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search bill...',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 16, color: AppTheme.textMuted),
+                      suffixIcon: _billNoQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _billNoQuery = '');
+                                _loadEntries();
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      isDense: true,
+                    ),
+                    onChanged: (v) {
+                      setState(() => _billNoQuery = v);
+                      _loadEntries();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _showFilterDialog,
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.tune_rounded, size: 20, color: AppTheme.primary),
+                      if (_hasFilters)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.danger,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.primary.withOpacity(0.08),
+                    padding: const EdgeInsets.all(8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                if (_hasFilters) ...[
+                  const SizedBox(width: 4),
+                  TextButton(
+                    onPressed: _clearFilters,
+                    child: const Text('Clear', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Type filter tabs
+            Row(
+              children: [
+                _TypeTab(label: 'All', value: 'all', current: _typeFilter,
+                    onTap: (v) => setState(() => _typeFilter = v)),
+                const SizedBox(width: 8),
+                _TypeTab(label: 'Stock In', value: 'in', current: _typeFilter,
+                    color: AppTheme.success,
+                    onTap: (v) => setState(() => _typeFilter = v)),
+                const SizedBox(width: 8),
+                _TypeTab(label: 'Stock Out', value: 'out', current: _typeFilter,
+                    color: AppTheme.danger,
+                    onTap: (v) => setState(() => _typeFilter = v)),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      decoration: const BoxDecoration(
+        color: AppTheme.bgCard,
+        border: Border(bottom: BorderSide(color: AppTheme.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Transactions',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    'All stock movements across sections',
+                    style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              // Search
+              SizedBox(
+                width: 220,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search bill no...',
+                    prefixIcon: const Icon(Icons.search_rounded,
+                        size: 16, color: AppTheme.textMuted),
+                    suffixIcon: _billNoQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded,
+                                size: 16),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _billNoQuery = '');
+                              _loadEntries();
+                            },
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  onChanged: (v) {
+                    setState(() => _billNoQuery = v);
+                    _loadEntries();
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Filter
+              OutlinedButton.icon(
+                onPressed: _showFilterDialog,
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.tune_rounded, size: 16),
+                    if (_hasFilters)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                label: const Text('Filters'),
+              ),
+              if (_hasFilters) ...[
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: _clearFilters,
+                  child: const Text('Clear All',
+                      style: TextStyle(color: AppTheme.danger)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Type filter tabs
+          Row(
+            children: [
+              _TypeTab(label: 'All', value: 'all', current: _typeFilter,
+                  onTap: (v) => setState(() => _typeFilter = v)),
+              const SizedBox(width: 8),
+              _TypeTab(label: 'Stock In', value: 'in', current: _typeFilter,
+                  color: AppTheme.success,
+                  onTap: (v) => setState(() => _typeFilter = v)),
+              const SizedBox(width: 8),
+              _TypeTab(label: 'Stock Out', value: 'out', current: _typeFilter,
+                  color: AppTheme.danger,
+                  onTap: (v) => setState(() => _typeFilter = v)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileList(List<StockEntry> entries) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: entries.length,
+      itemBuilder: (ctx, i) {
+        final entry = entries[i];
+        final isIn = entry.type == 'in';
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.bgCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isIn ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                  color: isIn ? AppTheme.success : AppTheme.danger,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.productName ?? 'Unknown',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${entry.sectionName ?? ""} · Bill: ${entry.billNo}',
+                      style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      DateFormat('dd MMM yyyy').format(entry.date),
+                      style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${isIn ? '+' : '-'}${entry.quantity.toStringAsFixed(1)} ${entry.productUnit ?? ""}',
+                    style: TextStyle(
+                      color: isIn ? AppTheme.success : AppTheme.danger,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
         children: [
-          // Top Bar
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            decoration: const BoxDecoration(
-              color: AppTheme.bgCard,
-              border: Border(bottom: BorderSide(color: AppTheme.border)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Transactions',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          'All stock movements across sections',
-                          style:
-                              TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    // Search
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search bill no...',
-                          prefixIcon: const Icon(Icons.search_rounded,
-                              size: 16, color: AppTheme.textMuted),
-                          suffixIcon: _billNoQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.close_rounded,
-                                      size: 16),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _billNoQuery = '');
-                                    _loadEntries();
-                                  },
-                                )
-                              : null,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          isDense: true,
-                        ),
-                        onChanged: (v) {
-                          setState(() => _billNoQuery = v);
-                          _loadEntries();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Filter
-                    OutlinedButton.icon(
-                      onPressed: _showFilterDialog,
-                      icon: Stack(
-                        children: [
-                          const Icon(Icons.tune_rounded, size: 16),
-                          if (_hasFilters)
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  color: AppTheme.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      label: const Text('Filters'),
-                    ),
-                    if (_hasFilters) ...[
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: _clearFilters,
-                        child: const Text('Clear All',
-                            style: TextStyle(color: AppTheme.danger)),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Type filter tabs
-                Row(
-                  children: [
-                    _TypeTab(label: 'All', value: 'all', current: _typeFilter,
-                        onTap: (v) => setState(() => _typeFilter = v)),
-                    const SizedBox(width: 8),
-                    _TypeTab(label: 'Stock In', value: 'in', current: _typeFilter,
-                        color: AppTheme.success,
-                        onTap: (v) => setState(() => _typeFilter = v)),
-                    const SizedBox(width: 8),
-                    _TypeTab(label: 'Stock Out', value: 'out', current: _typeFilter,
-                        color: AppTheme.danger,
-                        onTap: (v) => setState(() => _typeFilter = v)),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _buildTopBar(isMobile),
 
           // Active filters row
           if (_hasFilters) _activeFiltersRow(),
@@ -217,7 +401,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   );
                 }
 
-                return _buildTable(entries);
+                return isMobile ? _buildMobileList(entries) : _buildTable(entries);
               },
             ),
           ),
