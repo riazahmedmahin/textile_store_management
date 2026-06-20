@@ -115,7 +115,8 @@ class _LoginScreenState extends State<LoginScreen> {
             child: SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
                   child: Container(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Form(
@@ -156,36 +157,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               letterSpacing: -0.5,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Sign up With open Account', // Matched mockup wording
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
+
                           const SizedBox(height: 24),
 
-                          // Google + Apple ID Buttons Row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildSocialButton(
-                                  label: 'Google',
-                                  logo: _buildGoogleLogo(),
-                                  onTap: () {},
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildSocialButton(
-                                  label: 'Apple ID',
-                                  logo: const Icon(Icons.apple, color: Colors.black, size: 18),
-                                  onTap: () {},
-                                ),
-                              ),
-                            ],
-                          ),
                           const SizedBox(height: 28),
 
                           // Email Input
@@ -204,21 +178,26 @@ class _LoginScreenState extends State<LoginScreen> {
                             textInputAction: TextInputAction.next,
                             decoration: InputDecoration(
                               hintText: 'Enter Your Email',
-                              prefixIcon: const Icon(Icons.mail_outline_rounded, color: Color(0xFF9CA3AF), size: 20),
+                              prefixIcon: const Icon(Icons.mail_outline_rounded,
+                                  color: Color(0xFF9CA3AF), size: 20),
                               filled: true,
                               fillColor: const Color(0xFFF9FAFB),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFE5E7EB)),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFE5E7EB)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                                borderSide: const BorderSide(
+                                    color: AppTheme.primary, width: 1.5),
                               ),
                             ),
                             validator: (v) {
@@ -247,29 +226,37 @@ class _LoginScreenState extends State<LoginScreen> {
                             onFieldSubmitted: (_) => _handleLogin(),
                             decoration: InputDecoration(
                               hintText: 'Enter Your Password',
-                              prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF9CA3AF), size: 20),
+                              prefixIcon: const Icon(Icons.lock_outline_rounded,
+                                  color: Color(0xFF9CA3AF), size: 20),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                   color: const Color(0xFF9CA3AF),
                                   size: 18,
                                 ),
-                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword),
                               ),
                               filled: true,
                               fillColor: const Color(0xFFF9FAFB),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFE5E7EB)),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFE5E7EB)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                                borderSide: const BorderSide(
+                                    color: AppTheme.primary, width: 1.5),
                               ),
                             ),
                             validator: (v) {
@@ -284,28 +271,32 @@ class _LoginScreenState extends State<LoginScreen> {
                           // Sign Up (Login) Button
                           SizedBox(
                             width: double.infinity,
+                            height: 40,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF5E7EB3), // Mockup color matching #5E7EB3
+                                backgroundColor: const Color(
+                                    0xFF5E7EB3), // Mockup color matching #5E7EB3
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 15),
                               ),
                               onPressed: _isLoading ? null : _handleLogin,
                               child: _isLoading
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2),
                                     )
                                   : const Text(
                                       'Sign Up', // Matches Mockup Text "Sign Up"
                                       style: TextStyle(
                                         fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w500,
                                         color: Colors.white,
                                       ),
                                     ),
@@ -444,17 +435,21 @@ class _StitchOSLogoPainter extends CustomPainter {
     // Blue loop (tilted to the top right)
     pathBlue.moveTo(center.dx - w * 0.22, center.dy + h * 0.08);
     pathBlue.lineTo(center.dx - w * 0.08, center.dy - h * 0.22);
-    pathBlue.quadraticBezierTo(center.dx, center.dy - h * 0.32, center.dx + w * 0.14, center.dy - h * 0.22);
+    pathBlue.quadraticBezierTo(center.dx, center.dy - h * 0.32,
+        center.dx + w * 0.14, center.dy - h * 0.22);
     pathBlue.lineTo(center.dx + w * 0.28, center.dy - h * 0.04);
-    pathBlue.quadraticBezierTo(center.dx + w * 0.32, center.dy + h * 0.06, center.dx + w * 0.22, center.dy + h * 0.14);
+    pathBlue.quadraticBezierTo(center.dx + w * 0.32, center.dy + h * 0.06,
+        center.dx + w * 0.22, center.dy + h * 0.14);
     pathBlue.lineTo(center.dx + w * 0.04, center.dy + h * 0.24);
 
     // Magenta loop (interlocking from bottom left)
     pathMagenta.moveTo(center.dx + w * 0.22, center.dy - h * 0.08);
     pathMagenta.lineTo(center.dx + w * 0.08, center.dy + h * 0.22);
-    pathMagenta.quadraticBezierTo(center.dx, center.dy + h * 0.32, center.dx - w * 0.14, center.dy + h * 0.22);
+    pathMagenta.quadraticBezierTo(center.dx, center.dy + h * 0.32,
+        center.dx - w * 0.14, center.dy + h * 0.22);
     pathMagenta.lineTo(center.dx - w * 0.28, center.dy + h * 0.04);
-    pathMagenta.quadraticBezierTo(center.dx - w * 0.32, center.dy - h * 0.06, center.dx - w * 0.22, center.dy - h * 0.14);
+    pathMagenta.quadraticBezierTo(center.dx - w * 0.32, center.dy - h * 0.06,
+        center.dx - w * 0.22, center.dy - h * 0.14);
     pathMagenta.lineTo(center.dx - w * 0.04, center.dy - h * 0.24);
 
     // Draw paths with nice soft overlap shadow if possible, or just standard clean stroke
@@ -497,7 +492,8 @@ class _GoogleLogoPainter extends CustomPainter {
     final barPaint = Paint()
       ..color = const Color(0xFF4285F4)
       ..style = PaintingStyle.fill;
-    canvas.drawRect(Rect.fromLTWH(w * 0.5, h * 0.4, w * 0.45, h * 0.2), barPaint);
+    canvas.drawRect(
+        Rect.fromLTWH(w * 0.5, h * 0.4, w * 0.45, h * 0.2), barPaint);
   }
 
   @override
