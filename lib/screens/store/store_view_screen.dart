@@ -9,7 +9,7 @@ import '../../models/section.dart';
 import '../../models/product.dart';
 import '../../models/stock_entry.dart';
 
-/// Simplified Store View — only for stock entry (in/out), no management.
+/// Store View — only for stock entry (in/out). No add/edit/delete here.
 class StoreViewScreen extends StatefulWidget {
   const StoreViewScreen({super.key});
 
@@ -21,6 +21,10 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
   AppSection? _selectedSection;
   Product? _selectedProduct;
 
+  // Search
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
   // Form state
   final _formKey = GlobalKey<FormState>();
   final _billController = TextEditingController();
@@ -29,6 +33,10 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
   String _type = 'in';
   DateTime _date = DateTime.now();
   bool _isSaving = false;
+
+  // Keys for scroll-to-product on search
+  final Map<int, GlobalKey> _productKeys = {};
+  final ScrollController _pickerScrollController = ScrollController();
 
   @override
   void initState() {
@@ -43,12 +51,49 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
     _billController.dispose();
     _qtyController.dispose();
     _noteController.dispose();
+    _searchController.dispose();
+    _pickerScrollController.dispose();
     super.dispose();
+  }
+
+  List<AppSection> _filteredSections(
+      List<AppSection> all, ProductProvider pp) {
+    if (_searchQuery.isEmpty) return all;
+    return all.where((s) {
+      final nameMatch =
+          s.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final hasMatchingProduct = pp
+          .getProductsForSection(s.id!)
+          .any((p) =>
+              p.name.toLowerCase().contains(_searchQuery.toLowerCase()));
+      return nameMatch || hasMatchingProduct;
+    }).toList();
+  }
+
+  void _jumpToFirstMatch(List<AppSection> sections, ProductProvider pp) {
+    if (_searchQuery.isEmpty) return;
+    for (final sec in sections) {
+      for (final p in pp.getProductsForSection(sec.id!)) {
+        if (p.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
+          final key = _productKeys[p.id];
+          if (key?.currentContext != null) {
+            Scrollable.ensureVisible(
+              key!.currentContext!,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              alignment: 0.1,
+            );
+          }
+          return;
+        }
+      }
+    }
   }
 
   Widget _buildTopBar(bool isMobile) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 16),
+      padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 24, vertical: 16),
       decoration: const BoxDecoration(
         color: AppTheme.bgCard,
         border: Border(bottom: BorderSide(color: AppTheme.border)),
@@ -56,11 +101,13 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: AppTheme.secondary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.secondary.withOpacity(0.3)),
+              border:
+                  Border.all(color: AppTheme.secondary.withOpacity(0.3)),
             ),
             child: Row(
               children: [
@@ -95,8 +142,9 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                 ),
                 if (!isMobile)
                   const Text(
-                    'Record stock in or out quickly',
-                    style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                    'Select a product and record stock in or out',
+                    style:
+                        TextStyle(fontSize: 13, color: AppTheme.textMuted),
                   ),
               ],
             ),
@@ -106,32 +154,115 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
     );
   }
 
+  // ─── Search Bar ───────────────────────────────────────────────────────────────
+  Widget _buildSearchBar(ProductProvider pp, List<AppSection> allSections) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (v) {
+          setState(() => _searchQuery = v.trim());
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _jumpToFirstMatch(allSections, pp);
+          });
+        },
+        style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+        decoration: InputDecoration(
+          hintText: 'Search machine / product name…',
+          hintStyle:
+              const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+          prefixIcon: const Icon(Icons.search_rounded,
+              size: 18, color: AppTheme.textMuted),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      size: 16, color: AppTheme.textMuted),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          isDense: true,
+          filled: true,
+          fillColor: AppTheme.bgPage,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppTheme.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppTheme.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide:
+                const BorderSide(color: AppTheme.primary, width: 1.5),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPickerList() {
-    return Consumer<SectionProvider>(
-      builder: (context, secProvider, _) {
+    return Consumer2<SectionProvider, ProductProvider>(
+      builder: (context, secProvider, pp, _) {
         if (secProvider.isLoading) {
           return const Center(
               child: CircularProgressIndicator(strokeWidth: 2));
         }
-        return ListView.builder(
-          padding: const EdgeInsets.all(8),
-          itemCount: secProvider.sections.length,
-          itemBuilder: (ctx, i) {
-            final sec = secProvider.sections[i];
-            return _SectionExpansion(
-              section: sec,
-              selectedProduct: _selectedProduct,
-              onProductSelected: (p) {
-                setState(() {
-                  _selectedSection = sec;
-                  _selectedProduct = p;
-                });
-                context
-                    .read<StockProvider>()
-                    .loadEntriesForProduct(p.id!, p.initialStock);
-              },
-            );
-          },
+        final filtered = _filteredSections(secProvider.sections, pp);
+        return Column(
+          children: [
+            _buildSearchBar(pp, secProvider.sections),
+            if (filtered.isEmpty && _searchQuery.isNotEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.search_off_rounded,
+                          color: AppTheme.textMuted, size: 32),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No results for "$_searchQuery"',
+                        style: const TextStyle(
+                            color: AppTheme.textMuted, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  controller: _pickerScrollController,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  itemCount: filtered.length,
+                  itemBuilder: (ctx, i) {
+                    final sec = filtered[i];
+                    return _SectionExpansion(
+                      section: sec,
+                      selectedProduct: _selectedProduct,
+                      searchQuery: _searchQuery,
+                      productKeys: _productKeys,
+                      onProductSelected: (p) {
+                        setState(() {
+                          _selectedSection = sec;
+                          _selectedProduct = p;
+                        });
+                        context
+                            .read<StockProvider>()
+                            .loadEntriesForProduct(p.id!, p.initialStock);
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
         );
       },
     );
@@ -139,7 +270,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
 
   Widget _buildDesktopPicker() {
     return Container(
-      width: 280,
+      width: 290,
       decoration: const BoxDecoration(
         color: AppTheme.bgCard,
         border: Border(right: BorderSide(color: AppTheme.border)),
@@ -148,7 +279,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
             child: Text(
               'Select Section & Product',
               style: TextStyle(
@@ -159,9 +290,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
             ),
           ),
           const Divider(height: 1),
-          Expanded(
-            child: _buildPickerList(),
-          ),
+          Expanded(child: _buildPickerList()),
         ],
       ),
     );
@@ -172,7 +301,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
           child: Text(
             'Select Section & Product to continue',
             style: TextStyle(
@@ -183,9 +312,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
           ),
         ),
         const Divider(height: 1),
-        Expanded(
-          child: _buildPickerList(),
-        ),
+        Expanded(child: _buildPickerList()),
       ],
     );
   }
@@ -217,8 +344,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
           const SizedBox(height: 6),
           const Text(
             'Choose a section and product from the left panel',
-            style: TextStyle(
-                color: AppTheme.textMuted, fontSize: 13),
+            style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
           ),
         ],
       ),
@@ -234,8 +360,6 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
       body: Column(
         children: [
           _buildTopBar(isMobile),
-
-          // Body
           Expanded(
             child: isMobile
                 ? (_selectedProduct == null
@@ -271,7 +395,8 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
               children: [
                 if (isMobile) ...[
                   TextButton.icon(
-                    onPressed: () => setState(() => _selectedProduct = null),
+                    onPressed: () =>
+                        setState(() => _selectedProduct = null),
                     icon: const Icon(Icons.arrow_back_rounded, size: 16),
                     label: const Text('Back to Product List'),
                     style: TextButton.styleFrom(
@@ -281,14 +406,19 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                   ),
                   const SizedBox(height: 10),
                 ],
-                // Product Info
+
+                // Product Info banner
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: (_selectedSection?.color ?? AppTheme.primary).withOpacity(0.06),
+                    color:
+                        (_selectedSection?.color ?? AppTheme.primary)
+                            .withOpacity(0.06),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: (_selectedSection?.color ?? AppTheme.primary).withOpacity(0.2),
+                      color:
+                          (_selectedSection?.color ?? AppTheme.primary)
+                              .withOpacity(0.2),
                     ),
                   ),
                   child: Row(
@@ -297,12 +427,15 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: (_selectedSection?.color ?? AppTheme.primary).withOpacity(0.15),
+                          color:
+                              (_selectedSection?.color ?? AppTheme.primary)
+                                  .withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.inventory_2_outlined,
-                          color: _selectedSection?.color ?? AppTheme.primary,
+                          color:
+                              _selectedSection?.color ?? AppTheme.primary,
                           size: 22,
                         ),
                       ),
@@ -322,27 +455,32 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                             Text(
                               '${_selectedSection?.name ?? ''} · Unit: ${_selectedProduct!.unit}',
                               style: const TextStyle(
-                                  fontSize: 12, color: AppTheme.textMuted),
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted),
                             ),
                           ],
                         ),
                       ),
                       Consumer<StockProvider>(
                         builder: (_, sp, __) {
-                          final stock = sp.getCurrentStock(_selectedProduct!.id!);
+                          final stock = sp
+                              .getCurrentStock(_selectedProduct!.id!);
                           final isLow = stock < 5;
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               const Text('Current',
                                   style: TextStyle(
-                                      fontSize: 10, color: AppTheme.textMuted)),
+                                      fontSize: 10,
+                                      color: AppTheme.textMuted)),
                               Text(
                                 '${stock.toStringAsFixed(1)} ${_selectedProduct!.unit}',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
-                                  color: isLow ? AppTheme.danger : AppTheme.success,
+                                  color: isLow
+                                      ? AppTheme.danger
+                                      : AppTheme.success,
                                 ),
                               ),
                             ],
@@ -399,12 +537,14 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                       context: context,
                       initialDate: _date,
                       firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      lastDate: DateTime.now()
+                          .add(const Duration(days: 365)),
                     );
                     if (d != null) setState(() => _date = d);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       color: AppTheme.bgSurface,
                       borderRadius: BorderRadius.circular(10),
@@ -459,14 +599,17 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _qtyController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true),
                   decoration: InputDecoration(
                     hintText: 'Enter quantity',
                     prefixIcon: Icon(
                       _type == 'in'
                           ? Icons.arrow_downward_rounded
                           : Icons.arrow_upward_rounded,
-                      color: _type == 'in' ? AppTheme.success : AppTheme.danger,
+                      color: _type == 'in'
+                          ? AppTheme.success
+                          : AppTheme.danger,
                       size: 18,
                     ),
                     suffixText: _selectedProduct!.unit,
@@ -474,7 +617,8 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Required';
                     final qty = double.tryParse(v);
-                    if (qty == null || qty <= 0) return 'Enter a valid number';
+                    if (qty == null || qty <= 0)
+                      return 'Enter a valid number';
                     return null;
                   },
                 ),
@@ -503,8 +647,9 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _type == 'in' ? AppTheme.success : AppTheme.danger,
+                      backgroundColor: _type == 'in'
+                          ? AppTheme.success
+                          : AppTheme.danger,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _isSaving ? null : _submit,
@@ -515,9 +660,12 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                             child: CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2))
                         : Text(
-                            _type == 'in' ? '✓  Save Stock In' : '✓  Save Stock Out',
+                            _type == 'in'
+                                ? '✓  Save Stock In'
+                                : '✓  Save Stock Out',
                             style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w600),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600),
                           ),
                   ),
                 ),
@@ -539,7 +687,9 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
       quantity: double.parse(_qtyController.text),
       date: _date,
       billNo: _billController.text.trim(),
-      note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+      note: _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim(),
     );
 
     await context
@@ -547,6 +697,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
         .addEntry(entry, _selectedProduct!.initialStock);
 
     if (mounted) {
+      final savedType = _type;
       setState(() {
         _isSaving = false;
         _billController.clear();
@@ -557,7 +708,8 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: _type == 'in' ? AppTheme.success : AppTheme.danger,
+          backgroundColor:
+              savedType == 'in' ? AppTheme.success : AppTheme.danger,
           content: const Text('Entry saved successfully!',
               style: TextStyle(color: Colors.white)),
         ),
@@ -570,11 +722,15 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
 class _SectionExpansion extends StatefulWidget {
   final AppSection section;
   final Product? selectedProduct;
+  final String searchQuery;
+  final Map<int, GlobalKey> productKeys;
   final ValueChanged<Product> onProductSelected;
 
   const _SectionExpansion({
     required this.section,
     required this.selectedProduct,
+    required this.searchQuery,
+    required this.productKeys,
     required this.onProductSelected,
   });
 
@@ -589,8 +745,26 @@ class _SectionExpansionState extends State<_SectionExpansion> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().loadProductsForSection(widget.section.id!);
+      context
+          .read<ProductProvider>()
+          .loadProductsForSection(widget.section.id!);
     });
+  }
+
+  @override
+  void didUpdateWidget(_SectionExpansion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.searchQuery.isNotEmpty && !_expanded) {
+      final products = context
+          .read<ProductProvider>()
+          .getProductsForSection(widget.section.id!);
+      final hasMatch = products.any((p) =>
+          p.name.toLowerCase().contains(widget.searchQuery.toLowerCase()));
+      if (hasMatch) setState(() => _expanded = true);
+    }
+    if (widget.searchQuery.isEmpty && _expanded) {
+      setState(() => _expanded = false);
+    }
   }
 
   @override
@@ -647,38 +821,60 @@ class _SectionExpansionState extends State<_SectionExpansion> {
         if (_expanded)
           Consumer<ProductProvider>(
             builder: (ctx, provider, _) {
-              final products =
+              final allProducts =
                   provider.getProductsForSection(widget.section.id!);
+              final products = widget.searchQuery.isEmpty
+                  ? allProducts
+                  : allProducts
+                      .where((p) => p.name
+                          .toLowerCase()
+                          .contains(widget.searchQuery.toLowerCase()))
+                      .toList();
               if (products.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.only(left: 46, bottom: 8),
                   child: Text(
-                    'No products',
+                    widget.searchQuery.isNotEmpty
+                        ? 'No match'
+                        : 'No products',
                     style: TextStyle(
-                        color: AppTheme.textMuted.withOpacity(0.6), fontSize: 12),
+                        color: AppTheme.textMuted.withOpacity(0.6),
+                        fontSize: 12),
                   ),
                 );
               }
               return Column(
                 children: products.map((p) {
                   final isSelected = widget.selectedProduct?.id == p.id;
+                  final key = widget.productKeys
+                      .putIfAbsent(p.id!, () => GlobalKey());
+                  final isHighlighted = widget.searchQuery.isNotEmpty &&
+                      p.name
+                          .toLowerCase()
+                          .contains(widget.searchQuery.toLowerCase());
                   return InkWell(
+                    key: key,
                     onTap: () => widget.onProductSelected(p),
                     borderRadius: BorderRadius.circular(8),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      margin: const EdgeInsets.only(left: 16, right: 4, bottom: 2),
+                      margin: const EdgeInsets.only(
+                          left: 16, right: 4, bottom: 2),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primary.withOpacity(0.08)
-                            : Colors.transparent,
+                            : isHighlighted
+                                ? AppTheme.secondary.withOpacity(0.07)
+                                : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isSelected
                               ? AppTheme.primary.withOpacity(0.3)
-                              : Colors.transparent,
+                              : isHighlighted
+                                  ? AppTheme.secondary.withOpacity(0.3)
+                                  : Colors.transparent,
                         ),
                       ),
                       child: Row(
@@ -698,12 +894,14 @@ class _SectionExpansionState extends State<_SectionExpansion> {
                               p.name,
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: isSelected
+                                fontWeight: isSelected || isHighlighted
                                     ? FontWeight.w600
                                     : FontWeight.w400,
                                 color: isSelected
                                     ? AppTheme.primary
-                                    : AppTheme.textSecondary,
+                                    : isHighlighted
+                                        ? AppTheme.secondary
+                                        : AppTheme.textSecondary,
                               ),
                             ),
                           ),
@@ -750,7 +948,8 @@ class _TypeButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.08) : AppTheme.bgSurface,
+          color:
+              isSelected ? color.withOpacity(0.08) : AppTheme.bgSurface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? color : AppTheme.border,
@@ -760,13 +959,15 @@ class _TypeButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? color : AppTheme.textMuted, size: 18),
+            Icon(icon,
+                color: isSelected ? color : AppTheme.textMuted, size: 18),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 color: isSelected ? color : AppTheme.textMuted,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight:
+                    isSelected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 14,
               ),
             ),

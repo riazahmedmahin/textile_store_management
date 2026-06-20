@@ -69,8 +69,14 @@ class StockProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Dashboard Stats ─────────────────────────────────────────────────────────
+
+  Map<int, Map<String, dynamic>> _sectionStats = {};
+  Map<int, Map<String, dynamic>> get sectionStats => _sectionStats;
+
   Future<void> loadDashboardStats() async {
     _dashboardStats = await _db.getDashboardStats();
+    _sectionStats = await _db.getSectionStats();
     notifyListeners();
   }
 }

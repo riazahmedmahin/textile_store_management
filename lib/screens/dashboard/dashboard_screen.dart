@@ -187,72 +187,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ─── Enhanced Sections Overview ───────────────────────────────────────────────
   Widget _buildSectionSummary() {
-    return Consumer<SectionProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<SectionProvider, StockProvider>(
+      builder: (context, secProvider, stockProvider, _) {
+        final sectionStats = stockProvider.sectionStats;
+
         return _SectionCard(
-          title: 'Sections Overview',
+          title: 'Sections — Stock Overview',
           action: const SizedBox.shrink(),
-          child: provider.isLoading
+          child: secProvider.isLoading
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
-              : provider.sections.isEmpty
+              : secProvider.sections.isEmpty
                   ? _emptyState('No sections', Icons.category_outlined)
                   : Column(
-                      children: provider.sections.map((section) {
+                      children: secProvider.sections.map((section) {
+                        final stats = sectionStats[section.id] ?? {};
+                        final productCount = (stats['product_count'] as int?) ?? 0;
+                        final totalStock = (stats['total_stock'] as double?) ?? 0.0;
+                        final isLowStock = totalStock < 10 && productCount > 0;
+
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
+                          margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: section.color.withOpacity(0.06),
-                            borderRadius: BorderRadius.circular(10),
+                            color: section.color.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: section.color.withOpacity(0.2)),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
+                              // Top row: icon + name + product count badge
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: section.color.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(9),
+                                    ),
+                                    child: Icon(
+                                      _iconFromString(section.icon),
+                                      color: section.color,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      section.name,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  // Product count pill
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: section.color.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      '$productCount ${productCount == 1 ? 'product' : 'products'}',
+                                      style: TextStyle(
+                                        color: section.color,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              if (productCount > 0) ...[
+                                const SizedBox(height: 10),
+                                // Divider line
+                                Divider(
+                                  height: 1,
                                   color: section.color.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(
-                                  _iconFromString(section.icon),
-                                  color: section.color,
-                                  size: 17,
+                                const SizedBox(height: 8),
+                                // Stock bar row
+                                Row(
+                                  children: [
+                                    Icon(
+                                      isLowStock
+                                          ? Icons.warning_amber_rounded
+                                          : Icons.inventory_2_outlined,
+                                      size: 13,
+                                      color: isLowStock
+                                          ? AppTheme.danger
+                                          : AppTheme.textMuted,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Total Stock:',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.textMuted,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      totalStock.toStringAsFixed(
+                                          totalStock % 1 == 0 ? 0 : 1),
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: isLowStock
+                                            ? AppTheme.danger
+                                            : AppTheme.success,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'units',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isLowStock
+                                            ? AppTheme.danger
+                                            : AppTheme.textMuted,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  section.name,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.textPrimary,
+                                if (isLowStock) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '⚠ Low stock — reorder soon',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppTheme.danger,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: section.color.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'Active',
+                                ],
+                              ] else ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  'No products added yet',
                                   style: TextStyle(
-                                    color: section.color,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                    color: AppTheme.textMuted,
+                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         );

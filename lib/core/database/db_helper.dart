@@ -308,6 +308,46 @@ class DatabaseHelper {
     return initialStock + totalIn - totalOut;
   }
 
+  // ─── SECTION STATS ───────────────────────────────────────────────────────────
+
+  /// Returns a map of sectionId → { 'product_count': int, 'total_stock': double }
+  Future<Map<int, Map<String, dynamic>>> getSectionStats() async {
+    final products = await getAllProducts();
+    final entries = await _getAllEntries();
+
+    // Group products by section
+    final Map<int, List<Product>> bySection = {};
+    for (final p in products) {
+      bySection.putIfAbsent(p.sectionId, () => []).add(p);
+    }
+
+    // Compute current stock for each product
+    final Map<int, double> productStock = {};
+    for (final p in products) {
+      final productEntries = entries.where((e) => e.productId == p.id!);
+      final totalIn = productEntries
+          .where((e) => e.type == 'in')
+          .fold(0.0, (s, e) => s + e.quantity);
+      final totalOut = productEntries
+          .where((e) => e.type == 'out')
+          .fold(0.0, (s, e) => s + e.quantity);
+      productStock[p.id!] = p.initialStock + totalIn - totalOut;
+    }
+
+    final Map<int, Map<String, dynamic>> result = {};
+    for (final entry in bySection.entries) {
+      final sectionId = entry.key;
+      final prods = entry.value;
+      final totalStock =
+          prods.fold(0.0, (s, p) => s + (productStock[p.id!] ?? 0.0));
+      result[sectionId] = {
+        'product_count': prods.length,
+        'total_stock': totalStock,
+      };
+    }
+    return result;
+  }
+
   // ─── DASHBOARD STATS ─────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getDashboardStats() async {
