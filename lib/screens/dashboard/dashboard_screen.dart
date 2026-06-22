@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../providers/section_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/stock_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/stock_entry.dart';
+import '../sections/section_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -34,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     await stockProvider.loadDashboardStats();
     await sectionProvider.loadSections();
-    
+
     // Load products and stock entries for each section
     for (final section in sectionProvider.sections) {
       if (section.id != null) {
@@ -54,7 +56,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 800;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 800;
 
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
@@ -62,30 +65,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           _buildTopBar(),
           Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(isMobile ? 16 : 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStatsRow(),
-                  const SizedBox(height: 24),
-                  if (isMobile) ...[
-                    _buildRecentActivity(),
-                    const SizedBox(height: 20),
-                    _buildSectionSummary(),
-                  ] else ...[
-                    Row(
+            child: _isDataLoading
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                : SingleChildScrollView(
+                    padding: EdgeInsets.all(isMobile ? 16 : 24),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(flex: 3, child: _buildRecentActivity()),
-                        const SizedBox(width: 20),
-                        Expanded(flex: 2, child: _buildSectionSummary()),
+                        _buildStatsRow(),
+                        const SizedBox(height: 24),
+                        // Charts row
+                        if (isMobile) ...[
+                          _buildStockFlowChart(),
+                          const SizedBox(height: 20),
+                          _buildSectionPieChart(),
+                          const SizedBox(height: 20),
+                          _buildRecentActivity(),
+                          const SizedBox(height: 20),
+                          _buildSectionSummary(),
+                        ] else ...[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 3, child: _buildStockFlowChart()),
+                              const SizedBox(width: 20),
+                              Expanded(flex: 2, child: _buildSectionPieChart()),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 3, child: _buildRecentActivity()),
+                              const SizedBox(width: 20),
+                              Expanded(flex: 2, child: _buildSectionSummary()),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
-                  ],
-                ],
-              ),
-            ),
+                  ),
           ),
         ],
       ),
@@ -142,8 +161,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         int crossAxisCount = 4;
         double childAspectRatio = 1.8;
         if (width < 600) {
-          crossAxisCount = 1;
-          childAspectRatio = 3.2;
+          crossAxisCount = 2;
+          childAspectRatio = 2.2;
         } else if (width < 950) {
           crossAxisCount = 2;
           childAspectRatio = 2.0;
@@ -158,38 +177,442 @@ class _DashboardScreenState extends State<DashboardScreen> {
           childAspectRatio: childAspectRatio,
           children: [
             _StatCard(
-              label: 'Total Sections',
+              label: 'Sections',
               value: '$sectionCount',
               icon: Icons.category_rounded,
               iconColor: AppTheme.primary,
               bgColor: const Color(0xFFEEF2FF),
-              trend: 'Active sections',
             ),
             _StatCard(
-              label: 'Total Products',
+              label: 'Products',
               value: '$productCount',
               icon: Icons.inventory_2_rounded,
               iconColor: AppTheme.secondary,
               bgColor: const Color(0xFFECFDF5),
-              trend: 'Tracked products',
             ),
             _StatCard(
-              label: 'Total Stock In',
+              label: 'Stock In',
               value: totalIn.toStringAsFixed(0),
               icon: Icons.arrow_downward_rounded,
               iconColor: AppTheme.success,
               bgColor: const Color(0xFFF0FDF4),
-              trend: 'Units received',
             ),
             _StatCard(
-              label: 'Total Stock Out',
+              label: 'Stock Out',
               value: totalOut.toStringAsFixed(0),
               icon: Icons.arrow_upward_rounded,
               iconColor: AppTheme.danger,
               bgColor: const Color(0xFFFFF1F2),
-              trend: 'Units dispatched',
             ),
           ],
+        );
+      },
+    );
+  }
+
+  // ─── Stock In vs Out Bar Chart ─────────────────────────────────────────────
+  Widget _buildStockFlowChart() {
+    return Consumer<StockProvider>(
+      builder: (context, stockProvider, _) {
+        final stats = stockProvider.dashboardStats;
+        final totalIn = (stats['total_in'] as num?)?.toDouble() ?? 0;
+        final totalOut = (stats['total_out'] as num?)?.toDouble() ?? 0;
+        final netStock = totalIn - totalOut;
+
+        // Build per-section in/out data
+        final recentEntries =
+            (stats['recent_entries'] as List<StockEntry>?) ?? [];
+
+        // Group recent entries by section
+        final Map<String, double> sectionIn = {};
+        final Map<String, double> sectionOut = {};
+        for (final entry in recentEntries) {
+          final secName = entry.sectionName ?? 'Other';
+          if (entry.type == 'in') {
+            sectionIn[secName] = (sectionIn[secName] ?? 0) + entry.quantity;
+          } else {
+            sectionOut[secName] = (sectionOut[secName] ?? 0) + entry.quantity;
+          }
+        }
+
+        return _CardContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.bar_chart_rounded,
+                        color: AppTheme.primary, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Stock Flow Overview',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Summary chips
+              Row(
+                children: [
+                  _ChipBadge(
+                    label: 'In',
+                    value: totalIn.toStringAsFixed(0),
+                    color: AppTheme.success,
+                    icon: Icons.arrow_downward_rounded,
+                  ),
+                  const SizedBox(width: 10),
+                  _ChipBadge(
+                    label: 'Out',
+                    value: totalOut.toStringAsFixed(0),
+                    color: AppTheme.danger,
+                    icon: Icons.arrow_upward_rounded,
+                  ),
+                  const SizedBox(width: 10),
+                  _ChipBadge(
+                    label: 'Net',
+                    value: netStock.toStringAsFixed(0),
+                    color: netStock >= 0 ? AppTheme.primary : AppTheme.warning,
+                    icon: Icons.trending_up_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Bar chart
+              SizedBox(
+                height: 200,
+                child: totalIn == 0 && totalOut == 0
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.bar_chart_rounded,
+                                color: AppTheme.textMuted.withOpacity(0.4),
+                                size: 40),
+                            const SizedBox(height: 8),
+                            const Text('No stock data yet',
+                                style: TextStyle(
+                                    color: AppTheme.textMuted, fontSize: 13)),
+                          ],
+                        ),
+                      )
+                    : BarChart(
+                        BarChartData(
+                          alignment: BarChartAlignment.spaceAround,
+                          maxY: (totalIn > totalOut ? totalIn : totalOut) * 1.3,
+                          barTouchData: BarTouchData(
+                            touchTooltipData: BarTouchTooltipData(
+                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                final label = rodIndex == 0 ? 'Stock In' : 'Stock Out';
+                                return BarTooltipItem(
+                                  '$label\n${rod.toY.toStringAsFixed(0)}',
+                                  const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          titlesData: FlTitlesData(
+                            show: true,
+                            topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  switch (value.toInt()) {
+                                    case 0:
+                                      return const Text('Overall',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppTheme.textMuted));
+                                    default:
+                                      return const SizedBox.shrink();
+                                  }
+                                },
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 40,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    value.toInt().toString(),
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        color: AppTheme.textMuted),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval:
+                                ((totalIn > totalOut ? totalIn : totalOut) / 4)
+                                    .clamp(1, double.infinity),
+                            getDrawingHorizontalLine: (value) => FlLine(
+                              color: AppTheme.border.withOpacity(0.5),
+                              strokeWidth: 1,
+                              dashArray: [4, 4],
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          barGroups: [
+                            BarChartGroupData(
+                              x: 0,
+                              barRods: [
+                                BarChartRodData(
+                                  toY: totalIn,
+                                  color: AppTheme.success,
+                                  width: 28,
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(6)),
+                                  backDrawRodData: BackgroundBarChartRodData(
+                                    show: true,
+                                    toY: (totalIn > totalOut
+                                            ? totalIn
+                                            : totalOut) *
+                                        1.3,
+                                    color: AppTheme.success.withOpacity(0.05),
+                                  ),
+                                ),
+                                BarChartRodData(
+                                  toY: totalOut,
+                                  color: AppTheme.danger,
+                                  width: 28,
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(6)),
+                                  backDrawRodData: BackgroundBarChartRodData(
+                                    show: true,
+                                    toY: (totalIn > totalOut
+                                            ? totalIn
+                                            : totalOut) *
+                                        1.3,
+                                    color: AppTheme.danger.withOpacity(0.05),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              // Legend
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _LegendDot(color: AppTheme.success, label: 'Stock In'),
+                  const SizedBox(width: 20),
+                  _LegendDot(color: AppTheme.danger, label: 'Stock Out'),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── Section-wise Pie Chart ─────────────────────────────────────────────────
+  Widget _buildSectionPieChart() {
+    return Consumer2<SectionProvider, StockProvider>(
+      builder: (context, secProvider, stockProvider, _) {
+        final sectionStats = stockProvider.sectionStats;
+        final sections = secProvider.sections;
+
+        if (sections.isEmpty) {
+          return _CardContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.pie_chart_rounded,
+                          color: AppTheme.accent, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Stock by Section',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.pie_chart_outline_rounded,
+                          color: AppTheme.textMuted.withOpacity(0.4), size: 40),
+                      const SizedBox(height: 8),
+                      const Text('No sections yet',
+                          style: TextStyle(
+                              color: AppTheme.textMuted, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          );
+        }
+
+        // Build pie data
+        final List<_PieData> pieData = [];
+        for (final sec in sections) {
+          final stats = sectionStats[sec.id] ?? {};
+          final totalStock = (stats['total_stock'] as double?) ?? 0.0;
+          if (totalStock > 0) {
+            pieData.add(_PieData(
+              name: sec.name,
+              value: totalStock,
+              color: sec.color,
+            ));
+          }
+        }
+
+        final grandTotal = pieData.fold(0.0, (s, d) => s + d.value);
+
+        return _CardContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.pie_chart_rounded,
+                        color: AppTheme.accent, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Stock by Section',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              pieData.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.pie_chart_outline_rounded,
+                                color: AppTheme.textMuted.withOpacity(0.4),
+                                size: 40),
+                            const SizedBox(height: 8),
+                            const Text('No stock data',
+                                style: TextStyle(
+                                    color: AppTheme.textMuted, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        SizedBox(
+                          height: 180,
+                          child: PieChart(
+                            PieChartData(
+                              sectionsSpace: 3,
+                              centerSpaceRadius: 40,
+                              sections: pieData.map((d) {
+                                final pct = grandTotal > 0
+                                    ? (d.value / grandTotal * 100)
+                                    : 0.0;
+                                return PieChartSectionData(
+                                  value: d.value,
+                                  color: d.color,
+                                  radius: 40,
+                                  title: '${pct.toStringAsFixed(0)}%',
+                                  titleStyle: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Legend
+                        ...pieData.map((d) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: d.color,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      d.name,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.textSecondary),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${d.value.toStringAsFixed(0)} units',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    ),
+            ],
+          ),
         );
       },
     );
@@ -198,210 +621,321 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildRecentActivity() {
     return Consumer<StockProvider>(
       builder: (context, provider, _) {
-        final recent = (provider.dashboardStats['recent_entries'] as List<StockEntry>?) ?? [];
+        final recent =
+            (provider.dashboardStats['recent_entries'] as List<StockEntry>?) ??
+                [];
 
-        return _SectionCard(
-          title: 'Recent Transactions',
-          action: const Text('', style: TextStyle(fontSize: 12)),
-          child: recent.isEmpty
-              ? _emptyState('No transactions yet', Icons.receipt_long_outlined)
-              : Column(
-                  children: recent.map((entry) => _ActivityRow(entry: entry)).toList(),
-                ),
+        return _CardContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.receipt_long_rounded,
+                        color: AppTheme.warning, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Recent Transactions',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              recent.isEmpty
+                  ? _emptyState(
+                      'No transactions yet', Icons.receipt_long_outlined)
+                  : Column(
+                      children: recent
+                          .map((entry) => _ActivityRow(entry: entry))
+                          .toList(),
+                    ),
+            ],
+          ),
         );
       },
     );
   }
 
-  // ─── Enhanced Sections Overview ───────────────────────────────────────────────
+  // ─── Section Summary with clickable navigation ────────────────────────────
   Widget _buildSectionSummary() {
     return Consumer3<SectionProvider, ProductProvider, StockProvider>(
       builder: (context, secProvider, prodProvider, stockProvider, _) {
         final sectionStats = stockProvider.sectionStats;
 
-        return _SectionCard(
-          title: 'Store Stock — Section Wise',
-          action: const SizedBox.shrink(),
-          child: secProvider.isLoading || _isDataLoading
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(strokeWidth: 2),
+        return _CardContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppTheme.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.category_rounded,
+                        color: AppTheme.secondary, size: 18),
                   ),
-                )
-              : secProvider.sections.isEmpty
-                  ? _emptyState('No sections', Icons.category_outlined)
-                  : Column(
-                      children: secProvider.sections.map((section) {
-                        final stats = sectionStats[section.id] ?? {};
-                        final productCount = (stats['product_count'] as int?) ?? 0;
-                        final totalStock = (stats['total_stock'] as double?) ?? 0.0;
-                        final isLowStock = totalStock < 10 && productCount > 0;
-                        final products = prodProvider.getProductsForSection(section.id!);
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Store Stock — Section Wise',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              secProvider.isLoading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : secProvider.sections.isEmpty
+                      ? _emptyState('No sections', Icons.category_outlined)
+                      : Column(
+                          children: secProvider.sections.map((section) {
+                            final stats = sectionStats[section.id] ?? {};
+                            final productCount =
+                                (stats['product_count'] as int?) ?? 0;
+                            final totalStock =
+                                (stats['total_stock'] as double?) ?? 0.0;
+                            final isLowStock =
+                                totalStock < 10 && productCount > 0;
+                            final products =
+                                prodProvider.getProductsForSection(section.id!);
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: section.color.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: section.color.withOpacity(0.2)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Top row: icon + name + total stock badge
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: section.color.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(9),
-                                    ),
-                                    child: Icon(
-                                      _iconFromString(section.icon),
-                                      color: section.color,
-                                      size: 18,
-                                    ),
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SectionDetailScreen(
+                                        section: section),
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                ).then((_) => _refreshData());
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: section.color.withOpacity(0.04),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color:
+                                          section.color.withOpacity(0.2)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    // Header
+                                    Row(
                                       children: [
-                                        Text(
-                                          section.name,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppTheme.textPrimary,
-                                          ),
-                                        ),
-                                        Text(
-                                          '$productCount ${productCount == 1 ? 'product' : 'products'}',
-                                          style: const TextStyle(
-                                            color: AppTheme.textMuted,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Total stock badge
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      const Text(
-                                        'Total Stock',
-                                        style: TextStyle(fontSize: 9, color: AppTheme.textMuted),
-                                      ),
-                                      Text(
-                                        '${totalStock.toStringAsFixed(totalStock % 1 == 0 ? 0 : 1)} units',
-                                        style: TextStyle(
-                                          color: isLowStock ? AppTheme.danger : AppTheme.success,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Divider(
-                                height: 1,
-                                color: section.color.withOpacity(0.15),
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Products list
-                              if (products.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Text(
-                                    'No products added yet',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textMuted,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                )
-                              else
-                                ...products.map((product) {
-                                  final stock = stockProvider.getCurrentStock(product.id!);
-                                  final isLow = stock < 10; // Low stock threshold
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                    decoration: const BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(
-                                          color: Color(0xFFF3F4F6),
-                                          width: 0.5,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Bullet or small indicator dot
                                         Container(
-                                          width: 6,
-                                          height: 6,
+                                          width: 34,
+                                          height: 34,
                                           decoration: BoxDecoration(
-                                            color: isLow ? AppTheme.danger : section.color,
-                                            shape: BoxShape.circle,
+                                            color: section.color
+                                                .withOpacity(0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(9),
+                                          ),
+                                          child: Icon(
+                                            _iconFromString(section.icon),
+                                            color: section.color,
+                                            size: 16,
                                           ),
                                         ),
                                         const SizedBox(width: 10),
                                         Expanded(
-                                          child: Text(
-                                            product.name,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                              color: AppTheme.textPrimary,
-                                            ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                section.name,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color:
+                                                      AppTheme.textPrimary,
+                                                ),
+                                              ),
+                                              Text(
+                                                '$productCount ${productCount == 1 ? 'product' : 'products'}',
+                                                style: const TextStyle(
+                                                  color: AppTheme.textMuted,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                        // Stock quantity
-                                        Text(
-                                          '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: isLow ? AppTheme.danger : AppTheme.textPrimary,
-                                          ),
-                                        ),
-                                        if (isLow) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.danger.withOpacity(0.08),
-                                              borderRadius: BorderRadius.circular(4),
-                                              border: Border.all(color: AppTheme.danger.withOpacity(0.2)),
-                                            ),
-                                            child: const Text(
-                                              'LOW',
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              '${totalStock.toStringAsFixed(totalStock % 1 == 0 ? 0 : 1)}',
                                               style: TextStyle(
-                                                color: AppTheme.danger,
-                                                fontSize: 8,
+                                                color: isLowStock
+                                                    ? AppTheme.danger
+                                                    : AppTheme.success,
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                            Text(
+                                              'units',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                color: isLowStock
+                                                    ? AppTheme.danger
+                                                    : AppTheme.textMuted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 18,
+                                          color: section.color
+                                              .withOpacity(0.5),
+                                        ),
                                       ],
                                     ),
-                                  );
-                                }),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                                    // Product list preview (max 3)
+                                    if (products.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Divider(
+                                          height: 1,
+                                          color: section.color
+                                              .withOpacity(0.12)),
+                                      const SizedBox(height: 6),
+                                      ...products
+                                          .take(3)
+                                          .map((product) {
+                                        final stock = stockProvider
+                                            .getCurrentStock(
+                                                product.id!);
+                                        final isLow = stock < 10;
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 3),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 5,
+                                                height: 5,
+                                                decoration: BoxDecoration(
+                                                  color: isLow
+                                                      ? AppTheme.danger
+                                                      : section.color
+                                                          .withOpacity(
+                                                              0.6),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  product.name,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: AppTheme
+                                                        .textSecondary,
+                                                  ),
+                                                  overflow: TextOverflow
+                                                      .ellipsis,
+                                                ),
+                                              ),
+                                              Text(
+                                                '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight:
+                                                      FontWeight.w600,
+                                                  color: isLow
+                                                      ? AppTheme.danger
+                                                      : AppTheme
+                                                          .textPrimary,
+                                                ),
+                                              ),
+                                              if (isLow) ...[
+                                                const SizedBox(width: 4),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 4,
+                                                          vertical: 1),
+                                                  decoration:
+                                                      BoxDecoration(
+                                                    color: AppTheme.danger
+                                                        .withOpacity(
+                                                            0.08),
+                                                    borderRadius:
+                                                        BorderRadius
+                                                            .circular(3),
+                                                  ),
+                                                  child: const Text(
+                                                    'LOW',
+                                                    style: TextStyle(
+                                                      color: AppTheme
+                                                          .danger,
+                                                      fontSize: 7,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                      }),
+                                      if (products.length > 3)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            '+ ${products.length - 3} more',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: section.color,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+            ],
+          ),
         );
       },
     );
@@ -413,9 +947,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(icon, color: AppTheme.textMuted, size: 36),
+            Icon(icon, color: AppTheme.textMuted.withOpacity(0.4), size: 36),
             const SizedBox(height: 8),
-            Text(text, style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+            Text(text,
+                style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
           ],
         ),
       ),
@@ -437,48 +972,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 // ─── Shared Card Container ────────────────────────────────────────────────────
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget action;
+class _CardContainer extends StatelessWidget {
   final Widget child;
-
-  const _SectionCard({required this.title, required this.action, required this.child});
+  const _CardContainer({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.bgCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: Row(
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                action,
-              ],
-            ),
-          ),
-          const Divider(height: 16),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: child,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
+      child: child,
     );
   }
 }
@@ -490,7 +1004,6 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final Color bgColor;
-  final String trend;
 
   const _StatCard({
     required this.label,
@@ -498,7 +1011,6 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.bgColor,
-    required this.trend,
   });
 
   @override
@@ -509,12 +1021,19 @@ class _StatCard extends StatelessWidget {
         color: AppTheme.bgCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(12),
@@ -530,14 +1049,16 @@ class _StatCard extends StatelessWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 26,
+                    fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
                     height: 1,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                const SizedBox(height: 3),
+                Text(label,
+                    style:
+                        const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
               ],
             ),
           ),
@@ -545,6 +1066,84 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── Chip Badge ───────────────────────────────────────────────────────────────
+class _ChipBadge extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final IconData icon;
+
+  const _ChipBadge({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            '$label: $value',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Legend Dot ────────────────────────────────────────────────────────────────
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+      ],
+    );
+  }
+}
+
+// ─── Pie Data Helper ──────────────────────────────────────────────────────────
+class _PieData {
+  final String name;
+  final double value;
+  final Color color;
+  _PieData({required this.name, required this.value, required this.color});
 }
 
 // ─── Activity Row ─────────────────────────────────────────────────────────────
@@ -564,7 +1163,9 @@ class _ActivityRow extends StatelessWidget {
             : AppTheme.danger.withOpacity(0.04),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isIn ? AppTheme.success.withOpacity(0.15) : AppTheme.danger.withOpacity(0.15),
+          color: isIn
+              ? AppTheme.success.withOpacity(0.15)
+              : AppTheme.danger.withOpacity(0.15),
         ),
       ),
       child: Row(
@@ -597,7 +1198,8 @@ class _ActivityRow extends StatelessWidget {
                 ),
                 Text(
                   '${entry.sectionName ?? ''} · Bill: ${entry.billNo}',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  style:
+                      const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                 ),
               ],
             ),
@@ -615,7 +1217,8 @@ class _ActivityRow extends StatelessWidget {
               ),
               Text(
                 DateFormat('dd/MM').format(entry.date),
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
+                style:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 11),
               ),
             ],
           ),

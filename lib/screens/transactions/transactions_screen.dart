@@ -76,7 +76,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search bill...',
-                      prefixIcon: const Icon(Icons.search_rounded, size: 16, color: AppTheme.textMuted),
+                      prefixIcon: const Icon(Icons.search_rounded,
+                          size: 16, color: AppTheme.textMuted),
                       suffixIcon: _billNoQuery.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.close_rounded, size: 16),
@@ -87,7 +88,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                               },
                             )
                           : null,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
                       isDense: true,
                     ),
                     onChanged: (v) {
@@ -101,7 +103,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   onPressed: _showFilterDialog,
                   icon: Stack(
                     children: [
-                      const Icon(Icons.tune_rounded, size: 20, color: AppTheme.primary),
+                      const Icon(Icons.tune_rounded,
+                          size: 20, color: AppTheme.primary),
                       if (_hasFilters)
                         Positioned(
                           right: 0,
@@ -120,14 +123,16 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   style: IconButton.styleFrom(
                     backgroundColor: AppTheme.primary.withOpacity(0.08),
                     padding: const EdgeInsets.all(8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 if (_hasFilters) ...[
                   const SizedBox(width: 4),
                   TextButton(
                     onPressed: _clearFilters,
-                    child: const Text('Clear', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+                    child: const Text('Clear',
+                        style: TextStyle(color: AppTheme.danger, fontSize: 13)),
                   ),
                 ],
               ],
@@ -136,18 +141,30 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             // Type filter tabs
             Row(
               children: [
-                _TypeTab(label: 'All', value: 'all', current: _typeFilter,
+                _TypeTab(
+                    label: 'All',
+                    value: 'all',
+                    current: _typeFilter,
                     onTap: (v) => setState(() => _typeFilter = v)),
                 const SizedBox(width: 8),
-                _TypeTab(label: 'Stock In', value: 'in', current: _typeFilter,
+                _TypeTab(
+                    label: 'Stock In',
+                    value: 'in',
+                    current: _typeFilter,
                     color: AppTheme.success,
                     onTap: (v) => setState(() => _typeFilter = v)),
                 const SizedBox(width: 8),
-                _TypeTab(label: 'Stock Out', value: 'out', current: _typeFilter,
+                _TypeTab(
+                    label: 'Stock Out',
+                    value: 'out',
+                    current: _typeFilter,
                     color: AppTheme.danger,
                     onTap: (v) => setState(() => _typeFilter = v)),
               ],
             ),
+            SizedBox(
+              height: 200,
+            )
           ],
         ),
       );
@@ -193,8 +210,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                         size: 16, color: AppTheme.textMuted),
                     suffixIcon: _billNoQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.close_rounded,
-                                size: 16),
+                            icon: const Icon(Icons.close_rounded, size: 16),
                             onPressed: () {
                               _searchController.clear();
                               setState(() => _billNoQuery = '');
@@ -250,14 +266,23 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           // Type filter tabs
           Row(
             children: [
-              _TypeTab(label: 'All', value: 'all', current: _typeFilter,
+              _TypeTab(
+                  label: 'All',
+                  value: 'all',
+                  current: _typeFilter,
                   onTap: (v) => setState(() => _typeFilter = v)),
               const SizedBox(width: 8),
-              _TypeTab(label: 'Stock In', value: 'in', current: _typeFilter,
+              _TypeTab(
+                  label: 'Stock In',
+                  value: 'in',
+                  current: _typeFilter,
                   color: AppTheme.success,
                   onTap: (v) => setState(() => _typeFilter = v)),
               const SizedBox(width: 8),
-              _TypeTab(label: 'Stock Out', value: 'out', current: _typeFilter,
+              _TypeTab(
+                  label: 'Stock Out',
+                  value: 'out',
+                  current: _typeFilter,
                   color: AppTheme.danger,
                   onTap: (v) => setState(() => _typeFilter = v)),
             ],
@@ -288,11 +313,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.08),
+                  color: (isIn ? AppTheme.success : AppTheme.danger)
+                      .withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  isIn ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                  isIn
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
                   color: isIn ? AppTheme.success : AppTheme.danger,
                   size: 16,
                 ),
@@ -313,12 +341,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     const SizedBox(height: 2),
                     Text(
                       '${entry.sectionName ?? ""} · Bill: ${entry.billNo}',
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textMuted),
                     ),
                     const SizedBox(height: 1),
                     Text(
                       DateFormat('dd MMM yyyy').format(entry.date),
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textMuted),
                     ),
                   ],
                 ),
@@ -368,7 +398,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
                 var entries = sp.allEntries;
                 if (_typeFilter != 'all') {
-                  entries = entries.where((e) => e.type == _typeFilter).toList();
+                  entries =
+                      entries.where((e) => e.type == _typeFilter).toList();
                 }
 
                 if (entries.isEmpty) {
@@ -401,7 +432,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   );
                 }
 
-                return isMobile ? _buildMobileList(entries) : _buildTable(entries);
+                return isMobile
+                    ? _buildMobileList(entries)
+                    : _buildTable(entries);
               },
             ),
           ),
@@ -423,8 +456,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           children: [
             // Table Header
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
                 color: AppTheme.bgSurface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
@@ -500,8 +532,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   fontWeight: FontWeight.w600)),
           if (_selectedSectionId != null)
             Consumer<SectionProvider>(builder: (_, p, __) {
-              final sec =
-                  p.sections.where((s) => s.id == _selectedSectionId).firstOrNull;
+              final sec = p.sections
+                  .where((s) => s.id == _selectedSectionId)
+                  .firstOrNull;
               return _FilterChip(
                 label: sec?.name ?? 'Section',
                 onRemove: () {
@@ -577,7 +610,8 @@ class _TableRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.08),
+              color:
+                  (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.08),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(
@@ -603,7 +637,8 @@ class _TableRow extends StatelessWidget {
                 if (entry.sectionName != null)
                   Text(
                     entry.sectionName!,
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textMuted),
                   ),
               ],
             ),
@@ -612,7 +647,8 @@ class _TableRow extends StatelessWidget {
             flex: 2,
             child: Text(
               entry.billNo,
-              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              style:
+                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
           ),
           Expanded(
@@ -710,7 +746,8 @@ class _FilterChip extends StatelessWidget {
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(Icons.close_rounded, size: 13, color: AppTheme.primary),
+            child: const Icon(Icons.close_rounded,
+                size: 13, color: AppTheme.primary),
           ),
         ],
       ),
@@ -781,7 +818,8 @@ class _FilterDialogState extends State<_FilterDialog> {
                       color: AppTheme.textMuted, size: 18),
                 ),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('All Sections')),
+                  const DropdownMenuItem(
+                      value: null, child: Text('All Sections')),
                   ...widget.sections.map((s) =>
                       DropdownMenuItem(value: s.id, child: Text(s.name))),
                 ],

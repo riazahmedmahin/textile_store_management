@@ -18,12 +18,21 @@ class SectionDetailScreen extends StatefulWidget {
 }
 
 class _SectionDetailScreenState extends State<SectionDetailScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().loadProductsForSection(widget.section.id!);
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -90,15 +99,60 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
               ],
             ),
           ),
+          // Search bar
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+            color: AppTheme.bgCard,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _searchQuery = v.trim()),
+              style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Search products by name...',
+                hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppTheme.textMuted),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 16, color: AppTheme.textMuted),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                isDense: true,
+                filled: true,
+                fillColor: AppTheme.bgSurface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppTheme.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppTheme.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                ),
+              ),
+            ),
+          ),
           // Content
           Expanded(
             child: Consumer<ProductProvider>(
               builder: (context, provider, _) {
-                final products = provider.getProductsForSection(widget.section.id!);
+                final allProducts = provider.getProductsForSection(widget.section.id!);
+                final products = _searchQuery.isEmpty
+                    ? allProducts
+                    : allProducts
+                        .where((p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+                        .toList();
                 if (provider.isLoading) {
                   return const Center(child: CircularProgressIndicator(strokeWidth: 2));
                 }
-                if (products.isEmpty) {
+                if (allProducts.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -131,6 +185,21 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                           onPressed: () => _showAddProduct(context),
                           icon: const Icon(Icons.add_rounded),
                           label: const Text('Add Product'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                if (products.isEmpty && _searchQuery.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.search_off_rounded, color: AppTheme.textMuted, size: 40),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No products matching "$_searchQuery"',
+                          style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
                         ),
                       ],
                     ),
