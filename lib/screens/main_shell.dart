@@ -24,12 +24,12 @@ class _MainShellState extends State<MainShell> {
 
   final List<_NavItem> _adminNavItems = const [
     _NavItem(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'Dashboard'),
-    _NavItem(icon: Icons.category_outlined, activeIcon: Icons.category, label: 'Sections'),
-    _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Transactions'),
   ];
 
   final List<_NavItem> _storeNavItems = const [
     _NavItem(icon: Icons.store_outlined, activeIcon: Icons.store, label: 'Stock Entry'),
+    _NavItem(icon: Icons.category_outlined, activeIcon: Icons.category, label: 'Sections'),
+    _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Transactions'),
   ];
 
   @override
@@ -48,15 +48,20 @@ class _MainShellState extends State<MainShell> {
 
   Widget _currentScreen() {
     if (_currentView == AppView.store) {
-      return const StoreViewScreen();
+      switch (_currentIndex) {
+        case 0:
+          return const StoreViewScreen();
+        case 1:
+          return const SectionsListScreen();
+        case 2:
+          return const TransactionsScreen();
+        default:
+          return const StoreViewScreen();
+      }
     }
     switch (_currentIndex) {
       case 0:
         return const DashboardScreen();
-      case 1:
-        return const SectionsListScreen();
-      case 2:
-        return const TransactionsScreen();
       default:
         return const DashboardScreen();
     }
@@ -120,7 +125,7 @@ class _MainShellState extends State<MainShell> {
           child: sidebarWidget,
         ),
         body: _currentScreen(),
-        bottomNavigationBar: _currentView == AppView.admin
+        bottomNavigationBar: _navItems.length > 1
             ? BottomNavigationBar(
                 currentIndex: _currentIndex,
                 onTap: (i) => setState(() => _currentIndex = i),
@@ -130,7 +135,7 @@ class _MainShellState extends State<MainShell> {
                 selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 unselectedLabelStyle: const TextStyle(fontSize: 12),
                 elevation: 8,
-                items: _adminNavItems.map((item) {
+                items: _navItems.map((item) {
                   return BottomNavigationBarItem(
                     icon: Icon(item.icon),
                     activeIcon: Icon(item.activeIcon),

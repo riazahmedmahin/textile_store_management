@@ -157,9 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               letterSpacing: -0.5,
                             ),
                           ),
-
-                          const SizedBox(height: 24),
-
                           const SizedBox(height: 28),
 
                           // Email Input
