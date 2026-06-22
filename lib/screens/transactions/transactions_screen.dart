@@ -162,9 +162,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     onTap: (v) => setState(() => _typeFilter = v)),
               ],
             ),
-            SizedBox(
-              height: 200,
-            )
           ],
         ),
       );
