@@ -355,9 +355,11 @@ class DatabaseHelper {
     final products = await getAllProducts();
     final entries = await _getAllEntries();
 
+    final initialStockSum = products.fold(0.0, (s, p) => s + p.initialStock);
+
     final totalIn = entries
         .where((e) => e.type == 'in')
-        .fold(0.0, (s, e) => s + e.quantity);
+        .fold(0.0, (s, e) => s + e.quantity) + initialStockSum;
     final totalOut = entries
         .where((e) => e.type == 'out')
         .fold(0.0, (s, e) => s + e.quantity);
