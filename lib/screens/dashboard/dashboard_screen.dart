@@ -98,14 +98,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(height: 24),
                         // Charts row
                         if (isMobile) ...[
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: _buildStockFlowChart()),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildSectionPieChart()),
-                            ],
-                          ),
+                          _buildStockFlowChart(),
+                          const SizedBox(height: 16),
+                          _buildSectionPieChart(),
                           const SizedBox(height: 20),
                           _buildSectionSummary(),
                           if (hasLowStock) ...[

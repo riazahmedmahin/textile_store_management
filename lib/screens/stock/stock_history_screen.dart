@@ -135,6 +135,8 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
     final totalOut =
         entries.where((e) => e.type == 'out').fold(0.0, (s, e) => s + e.quantity);
 
+    final hasLegacyOpening = widget.product.initialStock > 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
@@ -146,17 +148,19 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Row(
           children: [
+            if (hasLegacyOpening) ...[
+              _SummaryChip(
+                label: 'Opening',
+                value: widget.product.initialStock,
+                unit: widget.product.unit,
+                color: AppTheme.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.add, size: 14, color: AppTheme.textMuted),
+              const SizedBox(width: 6),
+            ],
             _SummaryChip(
-              label: 'Opening',
-              value: widget.product.initialStock,
-              unit: widget.product.unit,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(width: 6),
-            const Icon(Icons.add, size: 14, color: AppTheme.textMuted),
-            const SizedBox(width: 6),
-            _SummaryChip(
-              label: 'Total In',
+              label: 'Stock In',
               value: totalIn,
               unit: widget.product.unit,
               color: AppTheme.success,
@@ -165,7 +169,7 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
             const Icon(Icons.remove, size: 14, color: AppTheme.textMuted),
             const SizedBox(width: 6),
             _SummaryChip(
-              label: 'Total Out',
+              label: 'Stock Out',
               value: totalOut,
               unit: widget.product.unit,
               color: AppTheme.danger,

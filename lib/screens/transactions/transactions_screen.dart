@@ -52,7 +52,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget _buildTopBar(bool isMobile) {
     if (isMobile) {
       return Container(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
         decoration: const BoxDecoration(
           color: AppTheme.bgCard,
           border: Border(bottom: BorderSide(color: AppTheme.border)),
@@ -67,6 +67,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
               ),
+            ),
+            const Text(
+              'All stock movements',
+              style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 12),
             Row(
@@ -137,7 +141,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ],
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             // Type filter tabs
             Row(
               children: [
