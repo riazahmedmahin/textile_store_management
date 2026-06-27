@@ -294,6 +294,15 @@ class DatabaseHelper {
         _keyStockEntries, jsonEncode(entries.map((e) => e.toMap()).toList()));
   }
 
+  Future<void> updateStockEntry(StockEntry entry) async {
+    final p = await _p;
+    var entries = await _getAllEntries();
+    final idx = entries.indexWhere((e) => e.id == entry.id);
+    if (idx >= 0) entries[idx] = entry;
+    await p.setString(
+        _keyStockEntries, jsonEncode(entries.map((e) => e.toMap()).toList()));
+  }
+
   // ─── STOCK CALCULATION ───────────────────────────────────────────────────────
 
   Future<double> getCurrentStock(int productId, double initialStock) async {
@@ -364,6 +373,38 @@ class DatabaseHelper {
         .where((e) => e.type == 'out')
         .fold(0.0, (s, e) => s + e.quantity);
 
+    final now = DateTime.now();
+    final todayEntries = entries.where((e) {
+      return e.date.year == now.year &&
+             e.date.month == now.month &&
+             e.date.day == now.day;
+    });
+
+    final todayIn = todayEntries
+        .where((e) => e.type == 'in')
+        .fold(0.0, (s, e) => s + e.quantity);
+    final todayOut = todayEntries
+        .where((e) => e.type == 'out')
+        .fold(0.0, (s, e) => s + e.quantity);
+
+    int lowStockCount = 0;
+    int outOfStockCount = 0;
+    for (final p in products) {
+      final productEntries = entries.where((e) => e.productId == p.id!);
+      final prodIn = productEntries
+          .where((e) => e.type == 'in')
+          .fold(0.0, (s, e) => s + e.quantity);
+      final prodOut = productEntries
+          .where((e) => e.type == 'out')
+          .fold(0.0, (s, e) => s + e.quantity);
+      final currentStock = p.initialStock + prodIn - prodOut;
+      if (currentStock <= 0) {
+        outOfStockCount++;
+      } else if (currentStock < 5) {
+        lowStockCount++;
+      }
+    }
+
     final Map<int, Product> productMap = {for (var p in products) p.id!: p};
     final Map<int, AppSection> sectionMap = {for (var s in sections) s.id!: s};
 
@@ -392,6 +433,10 @@ class DatabaseHelper {
       'product_count': products.length,
       'total_in': totalIn,
       'total_out': totalOut,
+      'today_in': todayIn,
+      'today_out': todayOut,
+      'low_stock_count': lowStockCount,
+      'out_of_stock_count': outOfStockCount,
       'recent_entries': recent.take(10).toList(),
     };
   }

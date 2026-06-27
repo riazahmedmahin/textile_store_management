@@ -49,6 +49,19 @@ class StockProvider extends ChangeNotifier {
     await loadDashboardStats();
   }
 
+  Future<void> updateEntry(StockEntry entry, double initialStock) async {
+    await _db.updateStockEntry(entry);
+    final list = _entriesByProduct[entry.productId];
+    if (list != null) {
+      final idx = list.indexWhere((e) => e.id == entry.id);
+      if (idx != -1) list[idx] = entry;
+    }
+    _currentStock[entry.productId] =
+        await _db.getCurrentStock(entry.productId, initialStock);
+    notifyListeners();
+    await loadDashboardStats();
+  }
+
   Future<void> loadAllEntries({
     int? sectionId,
     int? productId,

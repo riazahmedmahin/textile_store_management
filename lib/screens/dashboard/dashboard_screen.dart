@@ -191,21 +191,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Consumer2<SectionProvider, StockProvider>(
       builder: (context, secProvider, stockProvider, _) {
         final stats = stockProvider.dashboardStats;
-        final sectionCount = stats['section_count'] ?? 0;
-        final productCount = stats['product_count'] ?? 0;
         final totalIn = (stats['total_in'] as num?)?.toDouble() ?? 0;
         final totalOut = (stats['total_out'] as num?)?.toDouble() ?? 0;
+        final lowStockCount = stats['low_stock_count'] ?? 0;
+        final outOfStockCount = stats['out_of_stock_count'] ?? 0;
 
         final double width = MediaQuery.of(context).size.width;
-        int crossAxisCount = 4;
+        int crossAxisCount = 5;
         double childAspectRatio = 1.6;
         if (width < 600) {
           crossAxisCount = 2;
           childAspectRatio = 1.35;
-        } else if (width < 950) {
-          crossAxisCount = 2;
+        } else if (width < 900) {
+          crossAxisCount = 3;
+          childAspectRatio = 1.4;
+        } else if (width < 1200) {
+          crossAxisCount = 4;
           childAspectRatio = 1.5;
         }
+
+        final netStock = totalIn - totalOut;
 
         return GridView.count(
           crossAxisCount: crossAxisCount,
@@ -216,32 +221,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
           childAspectRatio: childAspectRatio,
           children: [
             _StatCard(
-              label: 'Sections',
-              value: '$sectionCount',
-              icon: Icons.category_rounded,
+              label: 'Current Stock',
+              value: netStock.toStringAsFixed(0),
+              icon: Icons.inventory_2_outlined,
               iconColor: AppTheme.primary,
               bgColor: const Color(0xFFEEF2FF),
             ),
             _StatCard(
-              label: 'Products',
-              value: '$productCount',
-              icon: Icons.inventory_2_rounded,
-              iconColor: AppTheme.secondary,
-              bgColor: const Color(0xFFECFDF5),
-            ),
-            _StatCard(
-              label: 'Stock In',
+              label: 'Total In',
               value: totalIn.toStringAsFixed(0),
               icon: Icons.arrow_downward_rounded,
               iconColor: AppTheme.success,
-              bgColor: const Color(0xFFF0FDF4),
+              bgColor: const Color(0xFFECFDF5),
             ),
             _StatCard(
-              label: 'Stock Out',
+              label: 'Total Out',
               value: totalOut.toStringAsFixed(0),
               icon: Icons.arrow_upward_rounded,
               iconColor: AppTheme.danger,
               bgColor: const Color(0xFFFFF1F2),
+            ),
+            _StatCard(
+              label: 'Low Stock Items',
+              value: '$lowStockCount',
+              icon: Icons.warning_amber_rounded,
+              iconColor: AppTheme.warning,
+              bgColor: const Color(0xFFFFF7ED),
+            ),
+            _StatCard(
+              label: 'Out of Stock Items',
+              value: '$outOfStockCount',
+              icon: Icons.error_outline_rounded,
+              iconColor: AppTheme.danger,
+              bgColor: const Color(0xFFFEF2F2),
             ),
           ],
         );
@@ -1289,6 +1301,7 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final Color bgColor;
+  final String? subtitle;
 
   const _StatCard({
     required this.label,
@@ -1296,6 +1309,7 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.bgColor,
+    this.subtitle,
   });
 
   @override
@@ -1303,14 +1317,21 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        gradient: const LinearGradient(
+          colors: [
+            Colors.white,
+            Color(0xFFEFF6FF), // Soft light blue tint
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: const Color(0xFFDBEAFE)), // Soft blue border
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF3B82F6).withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1344,6 +1365,16 @@ class _StatCard extends StatelessWidget {
                 Text(label,
                     style:
                         const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -288,10 +288,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   onTap: (v) => setState(() => _typeFilter = v)),
             ],
           ),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
+
 
   Widget _buildMobileList(List<StockEntry> entries) {
     return ListView.builder(
