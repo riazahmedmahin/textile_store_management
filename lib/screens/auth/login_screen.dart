@@ -79,12 +79,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       const StitchOSLogoWidget(size: 110),
                       const SizedBox(height: 16),
                       const Text(
-                        'StitchOS',
+                        'Lucky Group',
                         style: TextStyle(
                           fontSize: 42,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -1.0,
                           color: Colors.black,
+                        ),
+                      ),
+                      const Text(
+                        'Store Management',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w100,
+                          letterSpacing: -1.0,
+                          color: Colors.grey,
                         ),
                       ),
                       const Spacer(flex: 1),
@@ -96,9 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             _buildBulletPoint('Unlimited Product Upload'),
                             const SizedBox(height: 12),
-                            _buildBulletPoint('Fashion Manufacturers'),
+                            _buildBulletPoint('Textile Manufacturers'),
                             const SizedBox(height: 12),
-                            _buildBulletPoint('Solutions For Fashion Brands'),
+                            _buildBulletPoint('Solutions For Store Management'),
                           ],
                         ),
                       ),
@@ -133,9 +142,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const StitchOSLogoWidget(size: 80),
                                   const SizedBox(height: 10),
                                   const Text(
-                                    'StitchOS',
+                                    'Lucky Group',
                                     style: TextStyle(
-                                      fontSize: 30,
+                                      fontSize: 34,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: -0.8,
                                       color: Colors.black,
@@ -151,13 +160,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Text(
                             'Sign In',
                             style: TextStyle(
-                              fontSize: 34,
+                              fontSize: 24,
                               fontWeight: FontWeight.w700,
                               color: Colors.black,
                               letterSpacing: -0.5,
                             ),
                           ),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 20),
 
                           // Email Input
                           const Text(
@@ -204,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 10),
 
                           // Password Input
                           const Text(
@@ -290,7 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           color: Colors.white, strokeWidth: 2),
                                     )
                                   : const Text(
-                                      'Sign Up', // Matches Mockup Text "Sign Up"
+                                      'Sign In', // Matches Mockup Text "Sign Up"
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w500,
