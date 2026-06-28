@@ -47,7 +47,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final products = productProvider.getProductsForSection(section.id!);
         for (final product in products) {
           if (product.id != null) {
-            await stockProvider.loadEntriesForProduct(product.id!, product.initialStock);
+            await stockProvider.loadEntriesForProduct(
+                product.id!, product.initialStock);
           }
         }
       }
@@ -265,7 +266,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Consumer3<SectionProvider, ProductProvider, StockProvider>(
       builder: (context, secProvider, prodProvider, stockProvider, _) {
         final List<Map<String, dynamic>> lowStockItems = [];
-        
+
         for (final section in secProvider.sections) {
           if (section.id == null) continue;
           final products = prodProvider.getProductsForSection(section.id!);
@@ -285,165 +286,172 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (lowStockItems.isEmpty) return const SizedBox.shrink();
 
         final hasMore = lowStockItems.length > 8;
-        final displayItems = _showAllLowStock 
-            ? lowStockItems 
-            : lowStockItems.take(8).toList();
+        final displayItems =
+            _showAllLowStock ? lowStockItems : lowStockItems.take(8).toList();
 
         return _CardContainer(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppTheme.danger.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 18),
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Low Stock Alerts',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    child: const Icon(Icons.warning_amber_rounded,
+                        color: AppTheme.danger, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Low Stock Alerts',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.danger,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${lowStockItems.length}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
                         color: AppTheme.danger,
                       ),
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.danger.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${lowStockItems.length}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.danger,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: Column(
+                  children: [
+                    ...displayItems.map((item) {
+                      final product = item['product'] as Product;
+                      final section = item['section'] as AppSection;
+                      final stock = item['stock'] as double;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.danger.withOpacity(0.02),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppTheme.danger.withOpacity(0.08)),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  child: Column(
-                    children: [
-                      ...displayItems.map((item) {
-                        final product = item['product'] as Product;
-                        final section = item['section'] as AppSection;
-                        final stock = item['stock'] as double;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: AppTheme.danger.withOpacity(0.02),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppTheme.danger.withOpacity(0.08)),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      product.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                        color: AppTheme.textPrimary,
-                                      ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: AppTheme.textPrimary,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      section.name,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppTheme.textMuted,
-                                      ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    section.name,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppTheme.textMuted,
                                     ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.danger.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
+                                style: const TextStyle(
+                                  color: AppTheme.danger,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.danger.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
-                                  style: const TextStyle(
-                                    color: AppTheme.danger,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    if (hasMore) ...[
+                      const SizedBox(height: 4),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _showAllLowStock = !_showAllLowStock;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                                color: AppTheme.danger.withOpacity(0.2)),
+                            borderRadius: BorderRadius.circular(8),
+                            color: AppTheme.danger.withOpacity(0.02),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _showAllLowStock
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                color: AppTheme.danger,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _showAllLowStock
+                                    ? 'Show Less'
+                                    : 'View ${lowStockItems.length - 8} More Items',
+                                style: const TextStyle(
+                                  color: AppTheme.danger,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      }).toList(),
-                      if (hasMore) ...[
-                        const SizedBox(height: 4),
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _showAllLowStock = !_showAllLowStock;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            width: double.infinity,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppTheme.danger.withOpacity(0.2)),
-                              borderRadius: BorderRadius.circular(8),
-                              color: AppTheme.danger.withOpacity(0.02),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  _showAllLowStock ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                                  color: AppTheme.danger,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _showAllLowStock
-                                      ? 'Show Less'
-                                      : 'View ${lowStockItems.length - 8} More Items',
-                                  style: const TextStyle(
-                                    color: AppTheme.danger,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
-                      ],
+                      ),
                     ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
-      );
-    }
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   // ─── Stock In vs Out Bar Chart ─────────────────────────────────────────────
   Widget _buildStockFlowChart() {
@@ -557,8 +565,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           maxY: (totalIn > totalOut ? totalIn : totalOut) * 1.3,
                           barTouchData: BarTouchData(
                             touchTooltipData: BarTouchTooltipData(
-                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                final label = rodIndex == 0 ? 'Stock In' : 'Stock Out';
+                              getTooltipItem:
+                                  (group, groupIndex, rod, rodIndex) {
+                                final label =
+                                    rodIndex == 0 ? 'Stock In' : 'Stock Out';
                                 return BarTooltipItem(
                                   '$label\n${rod.toY.toStringAsFixed(0)}',
                                   const TextStyle(
@@ -667,8 +677,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 runSpacing: 6,
                 alignment: WrapAlignment.center,
                 children: [
-                  _LegendDot(color: AppTheme.success, label: 'Stock In', isCompact: isMobile),
-                  _LegendDot(color: AppTheme.danger, label: 'Stock Out', isCompact: isMobile),
+                  _LegendDot(
+                      color: AppTheme.success,
+                      label: 'Stock In',
+                      isCompact: isMobile),
+                  _LegendDot(
+                      color: AppTheme.danger,
+                      label: 'Stock Out',
+                      isCompact: isMobile),
                 ],
               ),
             ],
@@ -832,7 +848,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         SizedBox(height: isMobile ? 10 : 16),
                         // Legend
                         ...pieData.map((d) => Padding(
-                              padding: EdgeInsets.only(bottom: isMobile ? 4 : 6),
+                              padding:
+                                  EdgeInsets.only(bottom: isMobile ? 4 : 6),
                               child: Row(
                                 children: [
                                   Container(
@@ -840,7 +857,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     height: isMobile ? 8 : 10,
                                     decoration: BoxDecoration(
                                       color: d.color,
-                                      borderRadius: BorderRadius.circular(isMobile ? 2 : 3),
+                                      borderRadius: BorderRadius.circular(
+                                          isMobile ? 2 : 3),
                                     ),
                                   ),
                                   SizedBox(width: isMobile ? 6 : 8),
@@ -854,7 +872,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ),
                                   Text(
-                                    isMobile ? '${d.value.toStringAsFixed(0)} u' : '${d.value.toStringAsFixed(0)} units',
+                                    isMobile
+                                        ? '${d.value.toStringAsFixed(0)} u'
+                                        : '${d.value.toStringAsFixed(0)} units',
                                     style: TextStyle(
                                       fontSize: isMobile ? 10 : 12,
                                       fontWeight: FontWeight.w600,
@@ -898,7 +918,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(width: 10),
                   const Text(
-                    'Recent Transactions',
+                    'Recent Transactions History',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -968,20 +988,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ? _emptyState('No sections', Icons.category_outlined)
                       : LayoutBuilder(
                           builder: (context, constraints) {
-                            final double screenWidth = MediaQuery.of(context).size.width;
+                            final double screenWidth =
+                                MediaQuery.of(context).size.width;
                             final bool isMobile = screenWidth < 800;
 
                             final int visibleCardsCount = 3;
                             final double spacing = 12.0;
-                            final int totalSections = secProvider.sections.length;
+                            final int totalSections =
+                                secProvider.sections.length;
 
-                            final double cardWidth = isMobile 
-                                ? double.infinity 
-                                : (totalSections < visibleCardsCount 
-                                    ? (constraints.maxWidth - (spacing * (totalSections - 1))) / totalSections
-                                    : (constraints.maxWidth - (spacing * (visibleCardsCount - 1))) / visibleCardsCount);
+                            final double cardWidth = isMobile
+                                ? double.infinity
+                                : (totalSections < visibleCardsCount
+                                    ? (constraints.maxWidth -
+                                            (spacing * (totalSections - 1))) /
+                                        totalSections
+                                    : (constraints.maxWidth -
+                                            (spacing *
+                                                (visibleCardsCount - 1))) /
+                                        visibleCardsCount);
 
-                            final List<Widget> widgets = secProvider.sections.map((section) {
+                            final List<Widget> widgets =
+                                secProvider.sections.map((section) {
                               final stats = sectionStats[section.id] ?? {};
                               final productCount =
                                   (stats['product_count'] as int?) ?? 0;
@@ -989,30 +1017,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   (stats['total_stock'] as double?) ?? 0.0;
                               final isLowStock =
                                   totalStock < 10 && productCount > 0;
-                              final products =
-                                  prodProvider.getProductsForSection(section.id!);
+                              final products = prodProvider
+                                  .getProductsForSection(section.id!);
 
                               return GestureDetector(
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => SectionDetailScreen(
-                                          section: section),
+                                      builder: (_) =>
+                                          SectionDetailScreen(section: section),
                                     ),
                                   ).then((_) => _refreshData());
                                 },
                                 child: Container(
-                                  margin: isMobile 
-                                      ? const EdgeInsets.only(bottom: 12) 
+                                  margin: isMobile
+                                      ? const EdgeInsets.only(bottom: 12)
                                       : EdgeInsets.zero,
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
                                     color: section.color.withOpacity(0.04),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                        color:
-                                            section.color.withOpacity(0.2)),
+                                        color: section.color.withOpacity(0.2)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -1047,8 +1074,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                   style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w700,
-                                                    color:
-                                                        AppTheme.textPrimary,
+                                                    color: AppTheme.textPrimary,
                                                   ),
                                                 ),
                                                 Text(
@@ -1090,8 +1116,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           Icon(
                                             Icons.chevron_right_rounded,
                                             size: 18,
-                                            color: section.color
-                                                .withOpacity(0.5),
+                                            color:
+                                                section.color.withOpacity(0.5),
                                           ),
                                         ],
                                       ),
@@ -1103,12 +1129,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             color: section.color
                                                 .withOpacity(0.12)),
                                         const SizedBox(height: 6),
-                                        ...products
-                                            .take(3)
-                                            .map((product) {
+                                        ...products.take(3).map((product) {
                                           final stock = stockProvider
-                                              .getCurrentStock(
-                                                  product.id!);
+                                              .getCurrentStock(product.id!);
                                           final isLow = stock < 10;
                                           return Padding(
                                             padding: const EdgeInsets.symmetric(
@@ -1122,8 +1145,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                     color: isLow
                                                         ? AppTheme.danger
                                                         : section.color
-                                                            .withOpacity(
-                                                                0.6),
+                                                            .withOpacity(0.6),
                                                     shape: BoxShape.circle,
                                                   ),
                                                 ),
@@ -1136,44 +1158,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       color: AppTheme
                                                           .textSecondary,
                                                     ),
-                                                    overflow: TextOverflow
-                                                        .ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                                 Text(
                                                   '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
                                                   style: TextStyle(
                                                     fontSize: 11,
-                                                    fontWeight:
-                                                        FontWeight.w600,
+                                                    fontWeight: FontWeight.w600,
                                                     color: isLow
                                                         ? AppTheme.danger
-                                                        : AppTheme
-                                                            .textPrimary,
+                                                        : AppTheme.textPrimary,
                                                   ),
                                                 ),
                                                 if (isLow) ...[
                                                   const SizedBox(width: 4),
                                                   Container(
-                                                    padding:
-                                                        const EdgeInsets
-                                                            .symmetric(
-                                                            horizontal: 4,
-                                                            vertical: 1),
-                                                    decoration:
-                                                        BoxDecoration(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 1),
+                                                    decoration: BoxDecoration(
                                                       color: AppTheme.danger
-                                                          .withOpacity(
-                                                              0.08),
+                                                          .withOpacity(0.08),
                                                       borderRadius:
-                                                          BorderRadius
-                                                              .circular(3),
+                                                          BorderRadius.circular(
+                                                              3),
                                                     ),
                                                     child: const Text(
                                                       'LOW',
                                                       style: TextStyle(
-                                                        color: AppTheme
-                                                            .danger,
+                                                        color: AppTheme.danger,
                                                         fontSize: 7,
                                                         fontWeight:
                                                             FontWeight.w700,
@@ -1247,7 +1263,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Icon(icon, color: AppTheme.textMuted.withOpacity(0.4), size: 36),
             const SizedBox(height: 8),
             Text(text,
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                style:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
           ],
         ),
       ),
@@ -1363,8 +1380,8 @@ class _StatCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(label,
-                    style:
-                        const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textMuted)),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
                   Text(
@@ -1505,7 +1522,8 @@ class _ActivityRow extends StatelessWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.1),
+              color:
+                  (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -1548,8 +1566,7 @@ class _ActivityRow extends StatelessWidget {
               ),
               Text(
                 DateFormat('dd/MM').format(entry.date),
-                style:
-                    const TextStyle(color: AppTheme.textMuted, fontSize: 11),
+                style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
               ),
             ],
           ),

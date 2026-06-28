@@ -25,7 +25,9 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().loadProductsForSection(widget.section.id!);
+      context
+          .read<ProductProvider>()
+          .loadProductsForSection(widget.section.id!);
     });
   }
 
@@ -55,7 +57,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                   icon: const Icon(Icons.arrow_back_rounded, size: 20),
                   style: IconButton.styleFrom(
                     backgroundColor: AppTheme.bgSurface,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -109,18 +112,22 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
               style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Search products by name...',
-                hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppTheme.textMuted),
+                hintStyle:
+                    const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    size: 18, color: AppTheme.textMuted),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 16, color: AppTheme.textMuted),
+                        icon: const Icon(Icons.close_rounded,
+                            size: 16, color: AppTheme.textMuted),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _searchQuery = '');
                         },
                       )
                     : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 isDense: true,
                 filled: true,
                 fillColor: AppTheme.bgSurface,
@@ -134,7 +141,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                  borderSide:
+                      const BorderSide(color: AppTheme.primary, width: 1.5),
                 ),
               ),
             ),
@@ -143,14 +151,18 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
           Expanded(
             child: Consumer<ProductProvider>(
               builder: (context, provider, _) {
-                final allProducts = provider.getProductsForSection(widget.section.id!);
+                final allProducts =
+                    provider.getProductsForSection(widget.section.id!);
                 final products = _searchQuery.isEmpty
                     ? allProducts
                     : allProducts
-                        .where((p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+                        .where((p) => p.name
+                            .toLowerCase()
+                            .contains(_searchQuery.toLowerCase()))
                         .toList();
                 if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                  return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2));
                 }
                 if (allProducts.isEmpty) {
                   return Center(
@@ -178,7 +190,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                         const SizedBox(height: 6),
                         const Text(
                           'Add products to start tracking stock',
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                          style: TextStyle(
+                              color: AppTheme.textMuted, fontSize: 13),
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton.icon(
@@ -195,11 +208,13 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.search_off_rounded, color: AppTheme.textMuted, size: 40),
+                        const Icon(Icons.search_off_rounded,
+                            color: AppTheme.textMuted, size: 40),
                         const SizedBox(height: 12),
                         Text(
                           'No products matching "$_searchQuery"',
-                          style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                          style: const TextStyle(
+                              color: AppTheme.textMuted, fontSize: 14),
                         ),
                       ],
                     ),
@@ -306,7 +321,8 @@ class _ProductRowState extends State<_ProductRow> {
                       ),
                       Text(
                         'Unit: ${widget.product.unit}  ·  Opening: ${widget.product.initialStock.toStringAsFixed(0)} ${widget.product.unit}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textMuted),
                       ),
                     ],
                   ),
@@ -316,8 +332,8 @@ class _ProductRowState extends State<_ProductRow> {
                     final stock = sp.getCurrentStock(widget.product.id!);
                     final isLow = stock < 5;
                     return Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: isLow
                             ? AppTheme.danger.withOpacity(0.08)
@@ -333,7 +349,9 @@ class _ProductRowState extends State<_ProductRow> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isLow ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                            isLow
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_outline,
                             size: 14,
                             color: isLow ? AppTheme.danger : AppTheme.success,
                           ),
@@ -372,7 +390,8 @@ class _ProductRowState extends State<_ProductRow> {
                     const PopupMenuItem(
                       value: 'edit',
                       child: Row(children: [
-                        Icon(Icons.edit_outlined, size: 16, color: AppTheme.primary),
+                        Icon(Icons.edit_outlined,
+                            size: 16, color: AppTheme.primary),
                         SizedBox(width: 8),
                         Text('Edit', style: TextStyle(fontSize: 14)),
                       ]),
@@ -380,10 +399,12 @@ class _ProductRowState extends State<_ProductRow> {
                     const PopupMenuItem(
                       value: 'delete',
                       child: Row(children: [
-                        Icon(Icons.delete_outline, size: 16, color: AppTheme.danger),
+                        Icon(Icons.delete_outline,
+                            size: 16, color: AppTheme.danger),
                         SizedBox(width: 8),
                         Text('Delete',
-                            style: TextStyle(color: AppTheme.danger, fontSize: 14)),
+                            style: TextStyle(
+                                color: AppTheme.danger, fontSize: 14)),
                       ]),
                     ),
                   ],
@@ -403,7 +424,7 @@ class _ProductRowState extends State<_ProductRow> {
               Container(width: 1, height: 36, color: AppTheme.border),
               _ActionBtn(
                 icon: Icons.arrow_upward_rounded,
-                label: 'Stock Out',
+                label: 'Stock Issue',
                 color: AppTheme.danger,
                 onTap: () => _openEntry(context, 'out'),
               ),

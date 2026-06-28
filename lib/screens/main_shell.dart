@@ -23,13 +23,25 @@ class _MainShellState extends State<MainShell> {
   AppView _currentView = AppView.admin;
 
   final List<_NavItem> _adminNavItems = const [
-    _NavItem(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'Dashboard'),
+    _NavItem(
+        icon: Icons.dashboard_outlined,
+        activeIcon: Icons.dashboard,
+        label: 'Dashboard'),
   ];
 
   final List<_NavItem> _storeNavItems = const [
-    _NavItem(icon: Icons.store_outlined, activeIcon: Icons.store, label: 'Stock Entry'),
-    _NavItem(icon: Icons.category_outlined, activeIcon: Icons.category, label: 'Sections'),
-    _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Transactions'),
+    _NavItem(
+        icon: Icons.store_outlined,
+        activeIcon: Icons.store,
+        label: 'Stock Entry'),
+    _NavItem(
+        icon: Icons.category_outlined,
+        activeIcon: Icons.category,
+        label: 'Sections'),
+    _NavItem(
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long,
+        label: 'Transactions'),
   ];
 
   @override
@@ -101,11 +113,14 @@ class _MainShellState extends State<MainShell> {
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 16),
+                child: const Icon(Icons.storefront_rounded,
+                    color: Colors.white, size: 16),
               ),
               const SizedBox(width: 10),
               Text(
-                _currentView == AppView.admin ? 'StitchOS — Admin' : 'StitchOS — Store',
+                _currentView == AppView.admin
+                    ? 'StitchOS — Admin'
+                    : 'StitchOS — Store',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -132,7 +147,8 @@ class _MainShellState extends State<MainShell> {
                 selectedItemColor: AppTheme.primary,
                 unselectedItemColor: AppTheme.textMuted,
                 showUnselectedLabels: true,
-                selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                selectedLabelStyle:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 unselectedLabelStyle: const TextStyle(fontSize: 12),
                 elevation: 8,
                 items: _navItems.map((item) {
@@ -211,7 +227,8 @@ class _Sidebar extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
+                  child: const Icon(Icons.storefront_rounded,
+                      color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
                 const Column(
@@ -331,7 +348,8 @@ class _Sidebar extends StatelessWidget {
                     color: const Color(0xFF312E81),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.person_outline_rounded, color: Color(0xFF818CF8), size: 18),
+                  child: const Icon(Icons.person_outline_rounded,
+                      color: Color(0xFF818CF8), size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -351,13 +369,15 @@ class _Sidebar extends StatelessWidget {
                       Text(
                         auth.email ?? '',
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFF6366F1), fontSize: 10),
+                        style: const TextStyle(
+                            color: Color(0xFF6366F1), fontSize: 10),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                  icon: const Icon(Icons.logout_rounded,
+                      color: Color(0xFFEF4444), size: 18),
                   onPressed: () {
                     // Close drawer if open
                     if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
@@ -406,7 +426,9 @@ class _ViewTab extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 15, color: isSelected ? Colors.white : const Color(0xFF818CF8)),
+              Icon(icon,
+                  size: 15,
+                  color: isSelected ? Colors.white : const Color(0xFF818CF8)),
               const SizedBox(width: 5),
               Text(
                 label,
@@ -429,7 +451,8 @@ class _NavTile extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
-  const _NavTile({required this.item, required this.isActive, required this.onTap});
+  const _NavTile(
+      {required this.item, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

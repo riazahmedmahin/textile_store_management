@@ -61,7 +61,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Transactions',
+              'Transactions History',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -159,7 +159,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     onTap: (v) => setState(() => _typeFilter = v)),
                 const SizedBox(width: 8),
                 _TypeTab(
-                    label: 'Stock Out',
+                    label: 'Stock Issue',
                     value: 'out',
                     current: _typeFilter,
                     color: AppTheme.danger,
@@ -186,7 +186,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Transactions',
+                    'Transactions History',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
@@ -281,7 +281,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   onTap: (v) => setState(() => _typeFilter = v)),
               const SizedBox(width: 8),
               _TypeTab(
-                  label: 'Stock Out',
+                  label: 'Stock Issue',
                   value: 'out',
                   current: _typeFilter,
                   color: AppTheme.danger,
@@ -293,7 +293,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       ),
     );
   }
-
 
   Widget _buildMobileList(List<StockEntry> entries) {
     return ListView.builder(

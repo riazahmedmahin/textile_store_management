@@ -10,7 +10,8 @@ class StockEntryScreen extends StatefulWidget {
   final Product product;
   final String type;
 
-  const StockEntryScreen({super.key, required this.product, required this.type});
+  const StockEntryScreen(
+      {super.key, required this.product, required this.type});
 
   @override
   State<StockEntryScreen> createState() => _StockEntryScreenState();
@@ -63,11 +64,14 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.1),
+                    color: (isIn ? AppTheme.success : AppTheme.danger)
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    isIn ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                    isIn
+                        ? Icons.arrow_downward_rounded
+                        : Icons.arrow_upward_rounded,
                     color: isIn ? AppTheme.success : AppTheme.danger,
                     size: 18,
                   ),
@@ -86,8 +90,8 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                     ),
                     Text(
                       widget.product.name,
-                      style:
-                          const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 13, color: AppTheme.textMuted),
                     ),
                   ],
                 ),
@@ -130,7 +134,8 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                                 isIn
                                     ? Icons.arrow_downward_rounded
                                     : Icons.arrow_upward_rounded,
-                                color: isIn ? AppTheme.success : AppTheme.danger,
+                                color:
+                                    isIn ? AppTheme.success : AppTheme.danger,
                                 size: 28,
                               ),
                               const SizedBox(width: 12),
@@ -139,9 +144,11 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      isIn ? 'STOCK IN' : 'STOCK OUT',
+                                      isIn ? 'STOCK IN' : 'STOCK ISSUE',
                                       style: TextStyle(
-                                        color: isIn ? AppTheme.success : AppTheme.danger,
+                                        color: isIn
+                                            ? AppTheme.success
+                                            : AppTheme.danger,
                                         fontWeight: FontWeight.w700,
                                         fontSize: 16,
                                       ),
@@ -149,7 +156,8 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                                     Text(
                                       widget.product.name,
                                       style: const TextStyle(
-                                          color: AppTheme.textSecondary, fontSize: 13),
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 13),
                                     ),
                                   ],
                                 ),
@@ -164,7 +172,8 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                                       const Text(
                                         'Current Stock',
                                         style: TextStyle(
-                                            fontSize: 11, color: AppTheme.textMuted),
+                                            fontSize: 11,
+                                            color: AppTheme.textMuted),
                                       ),
                                       Text(
                                         '${current.toStringAsFixed(1)} ${widget.product.unit}',
@@ -225,8 +234,8 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _quantityController,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
                           decoration: InputDecoration(
                             hintText: 'Enter quantity',
                             prefixIcon: Icon(
@@ -239,9 +248,11 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                             suffixText: widget.product.unit,
                           ),
                           validator: (v) {
-                            if (v == null || v.trim().isEmpty) return 'Required';
+                            if (v == null || v.trim().isEmpty)
+                              return 'Required';
                             final qty = double.tryParse(v);
-                            if (qty == null || qty <= 0) return 'Enter a valid quantity';
+                            if (qty == null || qty <= 0)
+                              return 'Enter a valid quantity';
                             return null;
                           },
                         ),
@@ -270,7 +281,8 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                           width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isIn ? AppTheme.success : AppTheme.danger,
+                              backgroundColor:
+                                  isIn ? AppTheme.success : AppTheme.danger,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             onPressed: _isSaving ? null : _submit,
@@ -283,7 +295,8 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                                 : Text(
                                     isIn ? 'Save Stock In' : 'Save Stock Out',
                                     style: const TextStyle(
-                                        fontSize: 15, fontWeight: FontWeight.w600),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600),
                                   ),
                           ),
                         ),
@@ -309,10 +322,14 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
       quantity: double.parse(_quantityController.text),
       date: _selectedDate,
       billNo: _billNoController.text.trim(),
-      note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+      note: _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim(),
     );
 
-    await context.read<StockProvider>().addEntry(entry, widget.product.initialStock);
+    await context
+        .read<StockProvider>()
+        .addEntry(entry, widget.product.initialStock);
 
     if (mounted) {
       setState(() => _isSaving = false);
@@ -363,10 +380,13 @@ class _DatePickerTile extends StatelessWidget {
             Text(
               DateFormat('dd MMMM yyyy').format(selectedDate),
               style: const TextStyle(
-                  color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500),
             ),
             const Spacer(),
-            const Icon(Icons.arrow_drop_down_rounded, color: AppTheme.textMuted),
+            const Icon(Icons.arrow_drop_down_rounded,
+                color: AppTheme.textMuted),
           ],
         ),
       ),
