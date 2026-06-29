@@ -75,24 +75,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Spacer(flex: 3),
-                      // StitchOS Logo
-                      const StitchOSLogoWidget(size: 110),
-                      const SizedBox(height: 16),
+                      // KTL Logo
+                      Image.asset('assets/images/logo.png',
+                          height: 220, width: 220, fit: BoxFit.contain),
+                      //const SizedBox(height: 16),
+                      // const Text(
+                      //   'Lucky Group',
+                      //   style: TextStyle(
+                      //     fontSize: 36,
+                      //     fontWeight: FontWeight.w800,
+                      //     letterSpacing: -1.0,
+                      //     color: Colors.black,
+                      //   ),
+                      // ),
                       const Text(
-                        'Lucky Group',
-                        style: TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -1.0,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const Text(
-                        'Store Management',
+                        'Store Management System',
                         style: TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w100,
-                          letterSpacing: -1.0,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -0.5,
                           color: Colors.grey,
                         ),
                       ),
@@ -139,18 +140,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             Center(
                               child: Column(
                                 children: [
-                                  const StitchOSLogoWidget(size: 80),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'Lucky Group',
-                                    style: TextStyle(
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.8,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
+                                  Image.asset('assets/images/logo.png',
+                                      height: 150,
+                                      width: 150,
+                                      fit: BoxFit.contain),
+                                  // const SizedBox(height: 10),
+                                  // const Text(
+                                  //   'Lucky Group',
+                                  //   style: TextStyle(
+                                  //     fontSize: 30,
+                                  //     fontWeight: FontWeight.w800,
+                                  //     letterSpacing: -0.8,
+                                  //     color: Colors.black,
+                                  //   ),
+                                  // ),
+                                  // const SizedBox(height: 24),
                                 ],
                               ),
                             ),
@@ -398,74 +402,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ─── StitchOS logo painter ───────────────────────────────────────────────────
-class StitchOSLogoWidget extends StatelessWidget {
-  final double size;
-  const StitchOSLogoWidget({super.key, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _StitchOSLogoPainter(),
-      ),
-    );
-  }
-}
-
-class _StitchOSLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final center = Offset(w / 2, h / 2);
-
-    final paintBlue = Paint()
-      ..color = const Color(0xFF1E3A8A) // StitchOS Dark Blue
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.12
-      ..strokeCap = StrokeCap.round;
-
-    final paintMagenta = Paint()
-      ..color = const Color(0xFFF472B6) // StitchOS Magenta
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.12
-      ..strokeCap = StrokeCap.round;
-
-    // Draw two interlocking rounded diamond loops representing the logo
-    final pathBlue = Path();
-    final pathMagenta = Path();
-
-    // Blue loop (tilted to the top right)
-    pathBlue.moveTo(center.dx - w * 0.22, center.dy + h * 0.08);
-    pathBlue.lineTo(center.dx - w * 0.08, center.dy - h * 0.22);
-    pathBlue.quadraticBezierTo(center.dx, center.dy - h * 0.32,
-        center.dx + w * 0.14, center.dy - h * 0.22);
-    pathBlue.lineTo(center.dx + w * 0.28, center.dy - h * 0.04);
-    pathBlue.quadraticBezierTo(center.dx + w * 0.32, center.dy + h * 0.06,
-        center.dx + w * 0.22, center.dy + h * 0.14);
-    pathBlue.lineTo(center.dx + w * 0.04, center.dy + h * 0.24);
-
-    // Magenta loop (interlocking from bottom left)
-    pathMagenta.moveTo(center.dx + w * 0.22, center.dy - h * 0.08);
-    pathMagenta.lineTo(center.dx + w * 0.08, center.dy + h * 0.22);
-    pathMagenta.quadraticBezierTo(center.dx, center.dy + h * 0.32,
-        center.dx - w * 0.14, center.dy + h * 0.22);
-    pathMagenta.lineTo(center.dx - w * 0.28, center.dy + h * 0.04);
-    pathMagenta.quadraticBezierTo(center.dx - w * 0.32, center.dy - h * 0.06,
-        center.dx - w * 0.22, center.dy - h * 0.14);
-    pathMagenta.lineTo(center.dx - w * 0.04, center.dy - h * 0.24);
-
-    // Draw paths with nice soft overlap shadow if possible, or just standard clean stroke
-    canvas.drawPath(pathBlue, paintBlue);
-    canvas.drawPath(pathMagenta, paintMagenta);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
+// ─── Google logo painter ─────────────────────────────────────────────────────
 
 class _GoogleLogoPainter extends CustomPainter {
   @override

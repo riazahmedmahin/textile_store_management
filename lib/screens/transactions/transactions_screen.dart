@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/section_provider.dart';
+import '../../providers/product_provider.dart';
 import '../../providers/stock_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/stock_entry.dart';
 import '../../models/section.dart';
+import '../../models/product.dart';
+import '../../core/utils/pdf_report_helper.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -16,6 +19,7 @@ class TransactionsScreen extends StatefulWidget {
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
   int? _selectedSectionId;
+  int? _selectedProductId;
   String _billNoQuery = '';
   DateTime? _fromDate;
   DateTime? _toDate;
@@ -25,7 +29,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadEntries());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadEntries();
+      context.read<ProductProvider>().loadAllProducts();
+    });
   }
 
   @override
@@ -37,6 +44,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   void _loadEntries() {
     context.read<StockProvider>().loadAllEntries(
           sectionId: _selectedSectionId,
+          productId: _selectedProductId,
           billNo: _billNoQuery.isEmpty ? null : _billNoQuery,
           fromDate: _fromDate,
           toDate: _toDate,
@@ -45,9 +53,43 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   bool get _hasFilters =>
       _selectedSectionId != null ||
+      _selectedProductId != null ||
       _billNoQuery.isNotEmpty ||
       _fromDate != null ||
       _toDate != null;
+
+  void _generatePdfReport(List<StockEntry> entries) async {
+    try {
+      final sections = context.read<SectionProvider>().sections;
+      final products = context.read<ProductProvider>().allProducts;
+      
+      final sectionName = _selectedSectionId != null
+          ? sections.where((s) => s.id == _selectedSectionId).firstOrNull?.name
+          : null;
+          
+      final productName = _selectedProductId != null
+          ? products.where((p) => p.id == _selectedProductId).firstOrNull?.name
+          : null;
+
+      await PdfReportHelper.generateAndPrintReport(
+        entries: entries,
+        sectionName: sectionName,
+        productName: productName,
+        fromDate: _fromDate,
+        toDate: _toDate,
+        typeFilter: _typeFilter,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.danger,
+            content: Text('Failed to generate PDF: $e'),
+          ),
+        );
+      }
+    }
+  }
 
   Widget _buildTopBar(bool isMobile) {
     if (isMobile) {
@@ -130,6 +172,30 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
+                ),
+                const SizedBox(width: 8),
+                Consumer<StockProvider>(
+                  builder: (context, sp, _) {
+                    var entries = sp.allEntries;
+                    if (_typeFilter != 'all') {
+                      entries = entries.where((e) => e.type == _typeFilter).toList();
+                    }
+                    final hasEntries = entries.isNotEmpty;
+                    return IconButton(
+                      onPressed: hasEntries ? () => _generatePdfReport(entries) : null,
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                      tooltip: 'Export PDF Report',
+                      style: IconButton.styleFrom(
+                        backgroundColor: hasEntries 
+                            ? AppTheme.primary.withOpacity(0.08) 
+                            : AppTheme.border.withOpacity(0.3),
+                        foregroundColor: hasEntries ? AppTheme.primary : AppTheme.textMuted,
+                        padding: const EdgeInsets.all(8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    );
+                  },
                 ),
                 if (_hasFilters) ...[
                   const SizedBox(width: 4),
@@ -252,6 +318,27 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   ],
                 ),
                 label: const Text('Filters'),
+              ),
+              const SizedBox(width: 10),
+              Consumer<StockProvider>(
+                builder: (context, sp, _) {
+                  var entries = sp.allEntries;
+                  if (_typeFilter != 'all') {
+                    entries = entries.where((e) => e.type == _typeFilter).toList();
+                  }
+                  final hasEntries = entries.isNotEmpty;
+                  return ElevatedButton.icon(
+                    onPressed: hasEntries ? () => _generatePdfReport(entries) : null,
+                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                    label: const Text('PDF Report'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppTheme.border,
+                      disabledForegroundColor: AppTheme.textMuted,
+                    ),
+                  );
+                },
               ),
               if (_hasFilters) ...[
                 const SizedBox(width: 8),
@@ -545,6 +632,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 },
               );
             }),
+          if (_selectedProductId != null)
+            Consumer<ProductProvider>(builder: (_, p, __) {
+              final prod = p.allProducts
+                  .where((pr) => pr.id == _selectedProductId)
+                  .firstOrNull;
+              return _FilterChip(
+                label: prod?.name ?? 'Product',
+                onRemove: () {
+                  setState(() => _selectedProductId = null);
+                  _loadEntries();
+                },
+              );
+            }),
           if (_fromDate != null || _toDate != null)
             _FilterChip(
               label:
@@ -565,6 +665,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   void _clearFilters() {
     setState(() {
       _selectedSectionId = null;
+      _selectedProductId = null;
       _billNoQuery = '';
       _fromDate = null;
       _toDate = null;
@@ -576,16 +677,20 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   void _showFilterDialog() {
     final sections = context.read<SectionProvider>().sections;
+    final products = context.read<ProductProvider>().allProducts;
     showDialog(
       context: context,
       builder: (ctx) => _FilterDialog(
         sections: sections,
+        products: products,
         selectedSectionId: _selectedSectionId,
+        selectedProductId: _selectedProductId,
         fromDate: _fromDate,
         toDate: _toDate,
-        onApply: (sectionId, from, to) {
+        onApply: (sectionId, productId, from, to) {
           setState(() {
             _selectedSectionId = sectionId;
+            _selectedProductId = productId;
             _fromDate = from;
             _toDate = to;
           });
@@ -760,14 +865,18 @@ class _FilterChip extends StatelessWidget {
 // ─── Filter Dialog ────────────────────────────────────────────────────────────
 class _FilterDialog extends StatefulWidget {
   final List<AppSection> sections;
+  final List<Product> products;
   final int? selectedSectionId;
+  final int? selectedProductId;
   final DateTime? fromDate;
   final DateTime? toDate;
-  final Function(int?, DateTime?, DateTime?) onApply;
+  final Function(int?, int?, DateTime?, DateTime?) onApply;
 
   const _FilterDialog({
     required this.sections,
+    required this.products,
     required this.selectedSectionId,
+    required this.selectedProductId,
     required this.fromDate,
     required this.toDate,
     required this.onApply,
@@ -779,6 +888,7 @@ class _FilterDialog extends StatefulWidget {
 
 class _FilterDialogState extends State<_FilterDialog> {
   int? _sectionId;
+  int? _productId;
   DateTime? _from;
   DateTime? _to;
 
@@ -786,8 +896,16 @@ class _FilterDialogState extends State<_FilterDialog> {
   void initState() {
     super.initState();
     _sectionId = widget.selectedSectionId;
+    _productId = widget.selectedProductId;
     _from = widget.fromDate;
     _to = widget.toDate;
+  }
+
+  List<Product> get _filteredProducts {
+    if (_sectionId == null) {
+      return widget.products;
+    }
+    return widget.products.where((p) => p.sectionId == _sectionId).toList();
   }
 
   @override
@@ -825,7 +943,38 @@ class _FilterDialogState extends State<_FilterDialog> {
                   ...widget.sections.map((s) =>
                       DropdownMenuItem(value: s.id, child: Text(s.name))),
                 ],
-                onChanged: (v) => setState(() => _sectionId = v),
+                onChanged: (v) {
+                  setState(() {
+                    _sectionId = v;
+                    if (v != null) {
+                      final belongs = widget.products.any((p) => p.id == _productId && p.sectionId == v);
+                      if (!belongs) {
+                        _productId = null;
+                      }
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text('Product',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary)),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<int?>(
+                value: _productId,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.inventory_2_outlined,
+                      color: AppTheme.textMuted, size: 18),
+                ),
+                items: [
+                  const DropdownMenuItem(
+                      value: null, child: Text('All Products')),
+                  ..._filteredProducts.map((p) =>
+                      DropdownMenuItem(value: p.id, child: Text(p.name))),
+                ],
+                onChanged: (v) => setState(() => _productId = v),
               ),
               const SizedBox(height: 16),
               Row(
@@ -874,7 +1023,7 @@ class _FilterDialogState extends State<_FilterDialog> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        widget.onApply(_sectionId, _from, _to);
+                        widget.onApply(_sectionId, _productId, _from, _to);
                         Navigator.pop(context);
                       },
                       child: const Text('Apply'),

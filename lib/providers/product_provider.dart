@@ -6,9 +6,11 @@ import '../models/stock_entry.dart';
 class ProductProvider extends ChangeNotifier {
   final DatabaseHelper _db = DatabaseHelper.instance;
   final Map<int, List<Product>> _productsBySection = {};
+  List<Product> _allProducts = [];
   bool _isLoading = false;
 
   bool get isLoading => _isLoading;
+  List<Product> get allProducts => _allProducts;
 
   List<Product> getProductsForSection(int sectionId) =>
       _productsBySection[sectionId] ?? [];
@@ -17,6 +19,14 @@ class ProductProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     _productsBySection[sectionId] = await _db.getProductsBySection(sectionId);
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadAllProducts() async {
+    _isLoading = true;
+    notifyListeners();
+    _allProducts = await _db.getAllProducts();
     _isLoading = false;
     notifyListeners();
   }
@@ -43,6 +53,9 @@ class ProductProvider extends ChangeNotifier {
       );
       await _db.insertStockEntry(openingEntry);
     }
+    if (_allProducts.isNotEmpty) {
+      _allProducts = await _db.getAllProducts();
+    }
     notifyListeners();
   }
 
@@ -53,14 +66,20 @@ class ProductProvider extends ChangeNotifier {
       final idx = list.indexWhere((p) => p.id == product.id);
       if (idx != -1) {
         list[idx] = product;
-        notifyListeners();
       }
     }
+    if (_allProducts.isNotEmpty) {
+      _allProducts = await _db.getAllProducts();
+    }
+    notifyListeners();
   }
 
   Future<void> deleteProduct(int productId, int sectionId) async {
     await _db.deleteProduct(productId);
     _productsBySection[sectionId]?.removeWhere((p) => p.id == productId);
+    if (_allProducts.isNotEmpty) {
+      _allProducts = await _db.getAllProducts();
+    }
     notifyListeners();
   }
 }

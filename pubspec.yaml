@@ -17,6 +17,8 @@ dependencies:
   uuid: ^4.4.0
   shared_preferences: ^2.3.2
   animate_do: ^3.3.4
+  pdf: ^3.12.0
+  printing: ^5.14.3
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +27,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/logo.png
