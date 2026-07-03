@@ -82,7 +82,8 @@ class PdfReportHelper {
                   children: [
                     pw.Text(
                       'Date: ${dateFormat.format(DateTime.now())}',
-                      style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                      style: const pw.TextStyle(
+                          fontSize: 10, color: PdfColors.grey600),
                     ),
                   ],
                 ),
@@ -105,11 +106,13 @@ class PdfReportHelper {
               children: [
                 pw.Text(
                   'KTL Store Management System',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                  style:
+                      const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
                 ),
                 pw.Text(
                   'Page ${context.pageNumber} of ${context.pagesCount}',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                  style:
+                      const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
                 ),
               ],
             ),
@@ -175,16 +178,27 @@ class PdfReportHelper {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
               children: [
-                _buildStatBox('Total Records', '${entries.length}', PdfColors.blue900),
-                _buildStatBox('Total Stock In', '${totalIn.toStringAsFixed(1)} units', PdfColors.green900),
-                _buildStatBox('Total Issued', '${totalOut.toStringAsFixed(1)} units', PdfColors.red900),
+                _buildStatBox(
+                    'Total Records', '${entries.length}', PdfColors.blue900),
+                _buildStatBox('Total Stock In',
+                    '${totalIn.toStringAsFixed(1)} units', PdfColors.green900),
+                _buildStatBox('Total Issued',
+                    '${totalOut.toStringAsFixed(1)} units', PdfColors.red900),
               ],
             ),
             pw.SizedBox(height: 20),
 
             // Table of Transactions
             pw.TableHelper.fromTextArray(
-              headers: ['Date', 'Type', 'Product', 'Section', 'Bill No', 'Qty', 'Notes'],
+              headers: [
+                'Date',
+                'Type',
+                'Product',
+                'Section',
+                'Bill No',
+                'Qty',
+                'Notes'
+              ],
               data: entries.map((e) {
                 final isIn = e.type == 'in';
                 return [
@@ -235,11 +249,15 @@ class PdfReportHelper {
                     pw.Container(
                       width: 120,
                       decoration: const pw.BoxDecoration(
-                        border: pw.Border(top: pw.BorderSide(color: PdfColors.grey400, width: 0.8)),
+                        border: pw.Border(
+                            top: pw.BorderSide(
+                                color: PdfColors.grey400, width: 0.8)),
                       ),
                     ),
                     pw.SizedBox(height: 4),
-                    pw.Text('Prepared By', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    pw.Text('Prepared By',
+                        style: const pw.TextStyle(
+                            fontSize: 9, color: PdfColors.grey700)),
                   ],
                 ),
                 pw.Column(
@@ -247,11 +265,15 @@ class PdfReportHelper {
                     pw.Container(
                       width: 120,
                       decoration: const pw.BoxDecoration(
-                        border: pw.Border(top: pw.BorderSide(color: PdfColors.grey400, width: 0.8)),
+                        border: pw.Border(
+                            top: pw.BorderSide(
+                                color: PdfColors.grey400, width: 0.8)),
                       ),
                     ),
                     pw.SizedBox(height: 4),
-                    pw.Text('Authorized Signature', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    pw.Text('Authorized Signature',
+                        style: const pw.TextStyle(
+                            fontSize: 9, color: PdfColors.grey700)),
                   ],
                 ),
               ],
@@ -262,12 +284,14 @@ class PdfReportHelper {
     );
 
     await Printing.layoutPdf(
-      name: 'KTL_Stock_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf',
+      name:
+          'KTL_Stock_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf',
       onLayout: (PdfPageFormat format) async => pdf.save(),
     );
   }
 
-  static pw.Widget _buildStatBox(String label, String value, PdfColor textColor) {
+  static pw.Widget _buildStatBox(
+      String label, String value, PdfColor textColor) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: pw.BoxDecoration(
@@ -284,7 +308,8 @@ class PdfReportHelper {
           pw.SizedBox(height: 2),
           pw.Text(
             value,
-            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: textColor),
+            style: pw.TextStyle(
+                fontSize: 11, fontWeight: pw.FontWeight.bold, color: textColor),
           ),
         ],
       ),
