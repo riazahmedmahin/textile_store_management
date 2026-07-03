@@ -244,7 +244,7 @@ class _Sidebar extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'KTLTextile Management',
+                      'KTL Textile Management',
                       style: TextStyle(
                         color: Color(0xFF818CF8),
                         fontSize: 11,
