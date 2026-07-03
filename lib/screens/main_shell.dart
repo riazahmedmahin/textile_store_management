@@ -27,6 +27,10 @@ class _MainShellState extends State<MainShell> {
         icon: Icons.dashboard_outlined,
         activeIcon: Icons.dashboard,
         label: 'Dashboard'),
+    _NavItem(
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long,
+        label: 'Transactions'),
   ];
 
   final List<_NavItem> _storeNavItems = const [
@@ -74,6 +78,8 @@ class _MainShellState extends State<MainShell> {
     switch (_currentIndex) {
       case 0:
         return const DashboardScreen();
+      case 1:
+        return const TransactionsScreen();
       default:
         return const DashboardScreen();
     }
@@ -119,8 +125,8 @@ class _MainShellState extends State<MainShell> {
               const SizedBox(width: 10),
               Text(
                 _currentView == AppView.admin
-                    ? 'StitchOS — Admin'
-                    : 'StitchOS — Store',
+                    ? (_currentIndex == 1 ? 'KTL — Transactions' : 'KTL — Admin')
+                    : 'KTL — Store',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
