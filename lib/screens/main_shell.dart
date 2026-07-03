@@ -235,7 +235,7 @@ class _Sidebar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'StitchOS',
+                      'KTL',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 17,
