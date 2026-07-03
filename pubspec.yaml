@@ -19,6 +19,7 @@ dependencies:
   animate_do: ^3.3.4
   pdf: ^3.12.0
   printing: ^5.14.3
+  supabase_flutter: ^2.6.0
 
 dev_dependencies:
   flutter_test:

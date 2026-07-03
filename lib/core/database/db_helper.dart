@@ -1,229 +1,137 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/section.dart';
 import '../../models/product.dart';
 import '../../models/stock_entry.dart';
 
-/// Web-compatible storage using SharedPreferences + JSON.
-/// Replaces sqflite which is not supported on Flutter Web.
+/// Cloud-compatible storage using Supabase database.
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._internal();
   DatabaseHelper._internal();
 
-  static const _keySections = 'sections_v1';
-  static const _keyProducts = 'products_v1';
-  static const _keyStockEntries = 'stock_entries_v1';
-  static const _keyNextId = 'next_id_v1';
-
-  SharedPreferences? _prefs;
-
-  Future<SharedPreferences> get _p async {
-    _prefs ??= await SharedPreferences.getInstance();
-    return _prefs!;
-  }
-
-  // ─── ID GENERATOR ────────────────────────────────────────────────────────────
-
-  Future<int> _nextId() async {
-    final p = await _p;
-    final id = (p.getInt(_keyNextId) ?? 0) + 1;
-    await p.setInt(_keyNextId, id);
-    return id;
-  }
+  final _supabase = Supabase.instance.client;
 
   // ─── SECTIONS ────────────────────────────────────────────────────────────────
 
   Future<List<AppSection>> getSections() async {
-    final p = await _p;
-    var raw = p.getString(_keySections);
-    if (raw == null) {
-      await _insertDefaultSections();
-      raw = p.getString(_keySections);
-    }
-    if (raw == null) return [];
     try {
-      final List list = jsonDecode(raw) as List;
-      return list
-          .map((m) => AppSection.fromMap(Map<String, dynamic>.from(m)))
-          .toList()
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      final response = await _supabase
+          .from('sections')
+          .select()
+          .order('created_at', ascending: true);
+      return response.map((m) => AppSection.fromMap(m)).toList();
     } catch (e) {
-      await p.remove(_keySections);
-      await _insertDefaultSections();
-      final freshRaw = p.getString(_keySections);
-      if (freshRaw == null) return [];
-      final List list = jsonDecode(freshRaw) as List;
-      return list
-          .map((m) => AppSection.fromMap(Map<String, dynamic>.from(m)))
-          .toList()
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return [];
     }
-  }
-
-  Future<void> _insertDefaultSections() async {
-    final p = await _p;
-    final defaults = [
-      AppSection(
-          id: 1,
-          name: 'Machine Section',
-          colorValue: 0xFF6C63FF,
-          icon: 'precision_manufacturing'),
-      AppSection(
-          id: 2,
-          name: 'Electric Section',
-          colorValue: 0xFFFFC107,
-          icon: 'electric_bolt'),
-      AppSection(
-          id: 3,
-          name: 'Fabric Section', colorValue: 0xFF4CAF50, icon: 'texture'),
-    ];
-    await p.setString(
-        _keySections, jsonEncode(defaults.map((s) => s.toMap()).toList()));
-    await p.setInt(_keyNextId, 3);
   }
 
   Future<int> insertSection(AppSection section) async {
-    final p = await _p;
-    final sections = await getSections();
-    final id = await _nextId();
-    final withId = section.copyWith(id: id);
-    sections.add(withId);
-    await p.setString(
-        _keySections, jsonEncode(sections.map((s) => s.toMap()).toList()));
-    return id;
+    final data = section.toMap();
+    // Remove ID if null to let database auto-generate it
+    if (section.id == null) {
+      data.remove('id');
+    }
+    final response = await _supabase
+        .from('sections')
+        .insert(data)
+        .select('id')
+        .single();
+    return response['id'] as int;
   }
 
   Future<void> updateSection(AppSection section) async {
-    final p = await _p;
-    final sections = await getSections();
-    final idx = sections.indexWhere((s) => s.id == section.id);
-    if (idx >= 0) sections[idx] = section;
-    await p.setString(
-        _keySections, jsonEncode(sections.map((s) => s.toMap()).toList()));
+    await _supabase
+        .from('sections')
+        .update(section.toMap())
+        .eq('id', section.id!);
   }
 
   Future<void> deleteSection(int id) async {
-    final p = await _p;
-    var sections = await getSections();
-    sections.removeWhere((s) => s.id == id);
-    await p.setString(
-        _keySections, jsonEncode(sections.map((s) => s.toMap()).toList()));
-    // Cascade: delete products in this section
-    var products = await getAllProducts();
-    final deletedProductIds =
-        products.where((pr) => pr.sectionId == id).map((pr) => pr.id!).toList();
-    products.removeWhere((pr) => pr.sectionId == id);
-    await p.setString(
-        _keyProducts, jsonEncode(products.map((pr) => pr.toMap()).toList()));
-    // Cascade: delete stock entries for those products
-    var entries = await _getAllEntries();
-    entries.removeWhere((e) => deletedProductIds.contains(e.productId));
-    await p.setString(
-        _keyStockEntries, jsonEncode(entries.map((e) => e.toMap()).toList()));
+    // Note: Database cascade delete will automatically handle products and stock entries
+    await _supabase
+        .from('sections')
+        .delete()
+        .eq('id', id);
   }
 
   // ─── PRODUCTS ────────────────────────────────────────────────────────────────
 
   Future<List<Product>> getAllProducts() async {
-    final p = await _p;
-    final raw = p.getString(_keyProducts);
-    if (raw == null) return [];
     try {
-      final List list = jsonDecode(raw) as List;
-      return list
-          .map((m) => Product.fromMap(Map<String, dynamic>.from(m)))
-          .toList();
+      final response = await _supabase
+          .from('products')
+          .select();
+      return response.map((m) => Product.fromMap(m)).toList();
     } catch (e) {
-      await p.remove(_keyProducts);
       return [];
     }
   }
 
   Future<List<Product>> getProductsBySection(int sectionId) async {
-    final all = await getAllProducts();
-    return all.where((p) => p.sectionId == sectionId).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-  }
-
-  Future<int> insertProduct(Product product) async {
-    final p = await _p;
-    final products = await getAllProducts();
-    final id = await _nextId();
-    final withId = product.copyWith(id: id);
-    products.add(withId);
-    await p.setString(
-        _keyProducts, jsonEncode(products.map((pr) => pr.toMap()).toList()));
-    return id;
-  }
-
-  Future<void> updateProduct(Product product) async {
-    final p = await _p;
-    final products = await getAllProducts();
-    final idx = products.indexWhere((pr) => pr.id == product.id);
-    if (idx >= 0) products[idx] = product;
-    await p.setString(
-        _keyProducts, jsonEncode(products.map((pr) => pr.toMap()).toList()));
-  }
-
-  Future<void> deleteProduct(int id) async {
-    final p = await _p;
-    var products = await getAllProducts();
-    products.removeWhere((pr) => pr.id == id);
-    await p.setString(
-        _keyProducts, jsonEncode(products.map((pr) => pr.toMap()).toList()));
-    // Cascade: delete stock entries for this product
-    var entries = await _getAllEntries();
-    entries.removeWhere((e) => e.productId == id);
-    await p.setString(
-        _keyStockEntries, jsonEncode(entries.map((e) => e.toMap()).toList()));
-  }
-
-  // ─── STOCK ENTRIES ───────────────────────────────────────────────────────────
-
-  Future<List<StockEntry>> _getAllEntries() async {
-    final p = await _p;
-    final raw = p.getString(_keyStockEntries);
-    if (raw == null) return [];
     try {
-      final List list = jsonDecode(raw) as List;
-      return list
-          .map((m) => StockEntry.fromMap(Map<String, dynamic>.from(m)))
-          .toList();
+      final response = await _supabase
+          .from('products')
+          .select()
+          .eq('section_id', sectionId)
+          .order('name', ascending: true);
+      return response.map((m) => Product.fromMap(m)).toList();
     } catch (e) {
-      await p.remove(_keyStockEntries);
       return [];
     }
   }
 
-  Future<List<StockEntry>> getStockEntriesByProduct(int productId) async {
-    final entries = await _getAllEntries();
-    final products = await getAllProducts();
-    final sections = await getSections();
-    final Map<int, Product> productMap = {for (var p in products) p.id!: p};
-    final Map<int, AppSection> sectionMap = {for (var s in sections) s.id!: s};
+  Future<int> insertProduct(Product product) async {
+    final data = product.toMap();
+    if (product.id == null) {
+      data.remove('id');
+    }
+    final response = await _supabase
+        .from('products')
+        .insert(data)
+        .select('id')
+        .single();
+    return response['id'] as int;
+  }
 
-    return entries.where((e) => e.productId == productId).map((e) {
-      final prod = productMap[e.productId];
-      final sec = prod != null ? sectionMap[prod.sectionId] : null;
-      return StockEntry(
-        id: e.id,
-        productId: e.productId,
-        type: e.type,
-        quantity: e.quantity,
-        date: e.date,
-        billNo: e.billNo,
-        note: e.note,
-        createdAt: e.createdAt,
-        productName: prod?.name,
-        productUnit: prod?.unit,
-        sectionName: sec?.name,
-        sectionId: sec?.id,
-      );
-    }).toList()
-      ..sort((a, b) {
-        final dateComp = b.date.compareTo(a.date);
-        return dateComp != 0 ? dateComp : b.createdAt.compareTo(a.createdAt);
-      });
+  Future<void> updateProduct(Product product) async {
+    await _supabase
+        .from('products')
+        .update(product.toMap())
+        .eq('id', product.id!);
+  }
+
+  Future<void> deleteProduct(int id) async {
+    // Note: Database cascade delete will handle stock entries
+    await _supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+  }
+
+  // ─── STOCK ENTRIES ───────────────────────────────────────────────────────────
+
+  Future<List<StockEntry>> getStockEntriesByProduct(int productId) async {
+    try {
+      final response = await _supabase
+          .from('stock_entries')
+          .select('*, products(*, sections(*))')
+          .eq('product_id', productId)
+          .order('date', ascending: false)
+          .order('created_at', ascending: false);
+
+      return response.map((m) {
+        final prodMap = m['products'] as Map<String, dynamic>?;
+        final secMap = prodMap != null ? prodMap['sections'] as Map<String, dynamic>? : null;
+        return StockEntry.fromMap({
+          ...m,
+          'product_name': prodMap?['name'],
+          'product_unit': prodMap?['unit'],
+          'section_name': secMap?['name'],
+          'section_id': secMap?['id'],
+        });
+      }).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<List<StockEntry>> getAllStockEntries({
@@ -233,211 +141,224 @@ class DatabaseHelper {
     DateTime? fromDate,
     DateTime? toDate,
   }) async {
-    final entries = await _getAllEntries();
-    final products = await getAllProducts();
-    final sections = await getSections();
-    final Map<int, Product> productMap = {for (var p in products) p.id!: p};
-    final Map<int, AppSection> sectionMap = {for (var s in sections) s.id!: s};
+    try {
+      final response = await _supabase
+          .from('stock_entries')
+          .select('*, products(*, sections(*))');
 
-    final enriched = entries.map((e) {
-      final prod = productMap[e.productId];
-      final sec = prod != null ? sectionMap[prod.sectionId] : null;
-      return StockEntry(
-        id: e.id,
-        productId: e.productId,
-        type: e.type,
-        quantity: e.quantity,
-        date: e.date,
-        billNo: e.billNo,
-        note: e.note,
-        createdAt: e.createdAt,
-        productName: prod?.name,
-        productUnit: prod?.unit,
-        sectionName: sec?.name,
-        sectionId: sec?.id,
-      );
-    }).toList();
+      final list = response.map((m) {
+        final prodMap = m['products'] as Map<String, dynamic>?;
+        final secMap = prodMap != null ? prodMap['sections'] as Map<String, dynamic>? : null;
+        return StockEntry.fromMap({
+          ...m,
+          'product_name': prodMap?['name'],
+          'product_unit': prodMap?['unit'],
+          'section_name': secMap?['name'],
+          'section_id': secMap?['id'],
+        });
+      }).toList();
 
-    return enriched.where((e) {
-      if (productId != null && e.productId != productId) return false;
-      if (sectionId != null && e.sectionId != sectionId) return false;
-      if (billNo != null &&
-          billNo.isNotEmpty &&
-          !e.billNo.toLowerCase().contains(billNo.toLowerCase())) return false;
-      if (fromDate != null && e.date.isBefore(fromDate)) return false;
-      if (toDate != null && e.date.isAfter(toDate.add(const Duration(days: 1))))
-        return false;
-      return true;
-    }).toList()
-      ..sort((a, b) {
-        final d = b.date.compareTo(a.date);
-        return d != 0 ? d : b.createdAt.compareTo(a.createdAt);
-      });
+      return list.where((e) {
+        if (productId != null && e.productId != productId) return false;
+        if (sectionId != null && e.sectionId != sectionId) return false;
+        if (billNo != null &&
+            billNo.isNotEmpty &&
+            !e.billNo.toLowerCase().contains(billNo.toLowerCase())) return false;
+        if (fromDate != null && e.date.isBefore(fromDate)) return false;
+        if (toDate != null && e.date.isAfter(toDate.add(const Duration(days: 1))))
+          return false;
+        return true;
+      }).toList()
+        ..sort((a, b) {
+          final d = b.date.compareTo(a.date);
+          return d != 0 ? d : b.createdAt.compareTo(a.createdAt);
+        });
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<int> insertStockEntry(StockEntry entry) async {
-    final p = await _p;
-    final entries = await _getAllEntries();
-    final id = await _nextId();
-    final withId = entry.copyWith(id: id);
-    entries.add(withId);
-    await p.setString(
-        _keyStockEntries, jsonEncode(entries.map((e) => e.toMap()).toList()));
-    return id;
+    final data = entry.toMap();
+    if (entry.id == null) {
+      data.remove('id');
+    }
+    final response = await _supabase
+        .from('stock_entries')
+        .insert(data)
+        .select('id')
+        .single();
+    return response['id'] as int;
   }
 
   Future<void> deleteStockEntry(int id) async {
-    final p = await _p;
-    var entries = await _getAllEntries();
-    entries.removeWhere((e) => e.id == id);
-    await p.setString(
-        _keyStockEntries, jsonEncode(entries.map((e) => e.toMap()).toList()));
+    await _supabase
+        .from('stock_entries')
+        .delete()
+        .eq('id', id);
   }
 
   Future<void> updateStockEntry(StockEntry entry) async {
-    final p = await _p;
-    var entries = await _getAllEntries();
-    final idx = entries.indexWhere((e) => e.id == entry.id);
-    if (idx >= 0) entries[idx] = entry;
-    await p.setString(
-        _keyStockEntries, jsonEncode(entries.map((e) => e.toMap()).toList()));
+    await _supabase
+        .from('stock_entries')
+        .update(entry.toMap())
+        .eq('id', entry.id!);
   }
 
   // ─── STOCK CALCULATION ───────────────────────────────────────────────────────
 
   Future<double> getCurrentStock(int productId, double initialStock) async {
-    final entries = await _getAllEntries();
-    final relevant = entries.where((e) => e.productId == productId);
-    final totalIn = relevant
-        .where((e) => e.type == 'in')
-        .fold(0.0, (s, e) => s + e.quantity);
-    final totalOut = relevant
-        .where((e) => e.type == 'out')
-        .fold(0.0, (s, e) => s + e.quantity);
-    return initialStock + totalIn - totalOut;
+    try {
+      final response = await _supabase
+          .from('stock_entries')
+          .select('type, quantity')
+          .eq('product_id', productId);
+
+      final totalIn = response
+          .where((e) => e['type'] == 'in')
+          .fold(0.0, (s, e) => s + (e['quantity'] as num).toDouble());
+      final totalOut = response
+          .where((e) => e['type'] == 'out')
+          .fold(0.0, (s, e) => s + (e['quantity'] as num).toDouble());
+      return initialStock + totalIn - totalOut;
+    } catch (e) {
+      return initialStock;
+    }
   }
 
   // ─── SECTION STATS ───────────────────────────────────────────────────────────
 
-  /// Returns a map of sectionId → { 'product_count': int, 'total_stock': double }
   Future<Map<int, Map<String, dynamic>>> getSectionStats() async {
-    final products = await getAllProducts();
-    final entries = await _getAllEntries();
+    try {
+      final products = await getAllProducts();
+      final entriesResponse = await _supabase
+          .from('stock_entries')
+          .select('product_id, type, quantity');
 
-    // Group products by section
-    final Map<int, List<Product>> bySection = {};
-    for (final p in products) {
-      bySection.putIfAbsent(p.sectionId, () => []).add(p);
-    }
+      // Group products by section
+      final Map<int, List<Product>> bySection = {};
+      for (final p in products) {
+        bySection.putIfAbsent(p.sectionId, () => []).add(p);
+      }
 
-    // Compute current stock for each product
-    final Map<int, double> productStock = {};
-    for (final p in products) {
-      final productEntries = entries.where((e) => e.productId == p.id!);
-      final totalIn = productEntries
-          .where((e) => e.type == 'in')
-          .fold(0.0, (s, e) => s + e.quantity);
-      final totalOut = productEntries
-          .where((e) => e.type == 'out')
-          .fold(0.0, (s, e) => s + e.quantity);
-      productStock[p.id!] = p.initialStock + totalIn - totalOut;
-    }
+      // Compute current stock for each product
+      final Map<int, double> productStock = {};
+      for (final p in products) {
+        final productEntries = entriesResponse.where((e) => e['product_id'] == p.id!);
+        final totalIn = productEntries
+            .where((e) => e['type'] == 'in')
+            .fold(0.0, (s, e) => s + (e['quantity'] as num).toDouble());
+        final totalOut = productEntries
+            .where((e) => e['type'] == 'out')
+            .fold(0.0, (s, e) => s + (e['quantity'] as num).toDouble());
+        productStock[p.id!] = p.initialStock + totalIn - totalOut;
+      }
 
-    final Map<int, Map<String, dynamic>> result = {};
-    for (final entry in bySection.entries) {
-      final sectionId = entry.key;
-      final prods = entry.value;
-      final totalStock =
-          prods.fold(0.0, (s, p) => s + (productStock[p.id!] ?? 0.0));
-      result[sectionId] = {
-        'product_count': prods.length,
-        'total_stock': totalStock,
-      };
+      final Map<int, Map<String, dynamic>> result = {};
+      for (final entry in bySection.entries) {
+        final sectionId = entry.key;
+        final prods = entry.value;
+        final totalStock = prods.fold(0.0, (s, p) => s + (productStock[p.id!] ?? 0.0));
+        result[sectionId] = {
+          'product_count': prods.length,
+          'total_stock': totalStock,
+        };
+      }
+      return result;
+    } catch (e) {
+      return {};
     }
-    return result;
   }
 
   // ─── DASHBOARD STATS ─────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getDashboardStats() async {
-    final sections = await getSections();
-    final products = await getAllProducts();
-    final entries = await _getAllEntries();
+    try {
+      final sections = await getSections();
+      final products = await getAllProducts();
+      final entriesResponse = await _supabase
+          .from('stock_entries')
+          .select('*, products(*, sections(*))');
 
-    final initialStockSum = products.fold(0.0, (s, p) => s + p.initialStock);
+      final entries = entriesResponse.map((m) {
+        final prodMap = m['products'] as Map<String, dynamic>?;
+        final secMap = prodMap != null ? prodMap['sections'] as Map<String, dynamic>? : null;
+        return StockEntry.fromMap({
+          ...m,
+          'product_name': prodMap?['name'],
+          'product_unit': prodMap?['unit'],
+          'section_name': secMap?['name'],
+          'section_id': secMap?['id'],
+        });
+      }).toList();
 
-    final totalIn = entries
-        .where((e) => e.type == 'in')
-        .fold(0.0, (s, e) => s + e.quantity) + initialStockSum;
-    final totalOut = entries
-        .where((e) => e.type == 'out')
-        .fold(0.0, (s, e) => s + e.quantity);
+      final initialStockSum = products.fold(0.0, (s, p) => s + p.initialStock);
 
-    final now = DateTime.now();
-    final todayEntries = entries.where((e) {
-      return e.date.year == now.year &&
-             e.date.month == now.month &&
-             e.date.day == now.day;
-    });
-
-    final todayIn = todayEntries
-        .where((e) => e.type == 'in')
-        .fold(0.0, (s, e) => s + e.quantity);
-    final todayOut = todayEntries
-        .where((e) => e.type == 'out')
-        .fold(0.0, (s, e) => s + e.quantity);
-
-    int lowStockCount = 0;
-    int outOfStockCount = 0;
-    for (final p in products) {
-      final productEntries = entries.where((e) => e.productId == p.id!);
-      final prodIn = productEntries
+      final totalIn = entries
           .where((e) => e.type == 'in')
-          .fold(0.0, (s, e) => s + e.quantity);
-      final prodOut = productEntries
+          .fold(0.0, (s, e) => s + e.quantity) + initialStockSum;
+      final totalOut = entries
           .where((e) => e.type == 'out')
           .fold(0.0, (s, e) => s + e.quantity);
-      final currentStock = p.initialStock + prodIn - prodOut;
-      if (currentStock <= 0) {
-        outOfStockCount++;
-      } else if (currentStock < 5) {
-        lowStockCount++;
+
+      final now = DateTime.now();
+      final todayEntries = entries.where((e) {
+        return e.date.year == now.year &&
+               e.date.month == now.month &&
+               e.date.day == now.day;
+      });
+
+      final todayIn = todayEntries
+          .where((e) => e.type == 'in')
+          .fold(0.0, (s, e) => s + e.quantity);
+      final todayOut = todayEntries
+          .where((e) => e.type == 'out')
+          .fold(0.0, (s, e) => s + e.quantity);
+
+      int lowStockCount = 0;
+      int outOfStockCount = 0;
+      for (final p in products) {
+        final productEntries = entries.where((e) => e.productId == p.id!);
+        final prodIn = productEntries
+            .where((e) => e.type == 'in')
+            .fold(0.0, (s, e) => s + e.quantity);
+        final prodOut = productEntries
+            .where((e) => e.type == 'out')
+            .fold(0.0, (s, e) => s + e.quantity);
+        final currentStock = p.initialStock + prodIn - prodOut;
+        if (currentStock <= 0) {
+          outOfStockCount++;
+        } else if (currentStock < 5) {
+          lowStockCount++;
+        }
       }
+
+      final recent = List<StockEntry>.from(entries)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      return {
+        'section_count': sections.length,
+        'product_count': products.length,
+        'total_in': totalIn,
+        'total_out': totalOut,
+        'today_in': todayIn,
+        'today_out': todayOut,
+        'low_stock_count': lowStockCount,
+        'out_of_stock_count': outOfStockCount,
+        'recent_entries': recent.take(10).toList(),
+      };
+    } catch (e) {
+      return {
+        'section_count': 0,
+        'product_count': 0,
+        'total_in': 0.0,
+        'total_out': 0.0,
+        'today_in': 0.0,
+        'today_out': 0.0,
+        'low_stock_count': 0,
+        'out_of_stock_count': 0,
+        'recent_entries': <StockEntry>[],
+      };
     }
-
-    final Map<int, Product> productMap = {for (var p in products) p.id!: p};
-    final Map<int, AppSection> sectionMap = {for (var s in sections) s.id!: s};
-
-    final recent = entries.map((e) {
-      final prod = productMap[e.productId];
-      final sec = prod != null ? sectionMap[prod.sectionId] : null;
-      return StockEntry(
-        id: e.id,
-        productId: e.productId,
-        type: e.type,
-        quantity: e.quantity,
-        date: e.date,
-        billNo: e.billNo,
-        note: e.note,
-        createdAt: e.createdAt,
-        productName: prod?.name,
-        productUnit: prod?.unit,
-        sectionName: sec?.name,
-        sectionId: sec?.id,
-      );
-    }).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    return {
-      'section_count': sections.length,
-      'product_count': products.length,
-      'total_in': totalIn,
-      'total_out': totalOut,
-      'today_in': todayIn,
-      'today_out': todayOut,
-      'low_stock_count': lowStockCount,
-      'out_of_stock_count': outOfStockCount,
-      'recent_entries': recent.take(10).toList(),
-    };
   }
 }

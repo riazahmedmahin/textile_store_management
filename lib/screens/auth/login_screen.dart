@@ -37,12 +37,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       setState(() => _isLoading = false);
       if (!success) {
+        final authProvider = context.read<AuthProvider>();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             backgroundColor: AppTheme.danger,
             content: Text(
-              'Invalid credentials! Use admin@ktlbd.com or store@ktlbd.com with pass 123456.',
-              style: TextStyle(color: Colors.white),
+              authProvider.errorMessage ?? 'Invalid credentials! Use admin@ktlbd.com or store@ktlbd.com with pass 123456.',
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         );
