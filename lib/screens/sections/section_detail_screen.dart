@@ -320,7 +320,7 @@ class _ProductRowState extends State<_ProductRow> {
                         ),
                       ),
                       Text(
-                        'Unit: ${widget.product.unit}  ·  Opening: ${widget.product.initialStock.toStringAsFixed(0)} ${widget.product.unit}',
+                        'Unit: ${widget.product.unit}  · ',
                         style: const TextStyle(
                             fontSize: 12, color: AppTheme.textMuted),
                       ),
