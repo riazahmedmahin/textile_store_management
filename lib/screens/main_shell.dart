@@ -484,7 +484,7 @@ class _Sidebar extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: const Color(0xFF0F0E30),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFF312E81), width: 1),
               ),
               child: Row(

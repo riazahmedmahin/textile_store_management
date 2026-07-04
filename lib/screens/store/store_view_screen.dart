@@ -679,12 +679,45 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final qty = double.parse(_qtyController.text);
+    if (_type == 'out') {
+      final currentStock =
+          context.read<StockProvider>().getCurrentStock(_selectedProduct!.id!);
+      if (qty > currentStock) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: AppTheme.danger),
+                SizedBox(width: 8),
+                Text('Insufficient Stock'),
+              ],
+            ),
+            content: Text(
+              'Cannot issue $qty ${_selectedProduct!.unit}.\nOnly ${currentStock.toStringAsFixed(1)} ${_selectedProduct!.unit} available in stock.',
+              style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
 
     final entry = StockEntry(
       productId: _selectedProduct!.id!,
       type: _type,
-      quantity: double.parse(_qtyController.text),
+      quantity: qty,
       date: _date,
       billNo: _billController.text.trim(),
       note: _noteController.text.trim().isEmpty
