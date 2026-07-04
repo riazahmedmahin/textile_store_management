@@ -931,28 +931,40 @@ class _FilterDialogState extends State<_FilterDialog> {
                       fontWeight: FontWeight.w500,
                       color: AppTheme.textSecondary)),
               const SizedBox(height: 6),
-              DropdownButtonFormField<int?>(
-                value: _sectionId,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.category_outlined,
-                      color: AppTheme.textMuted, size: 18),
-                ),
-                items: [
-                  const DropdownMenuItem(
-                      value: null, child: Text('All Sections')),
-                  ...widget.sections.map((s) =>
-                      DropdownMenuItem(value: s.id, child: Text(s.name))),
-                ],
-                onChanged: (v) {
-                  setState(() {
-                    _sectionId = v;
-                    if (v != null) {
-                      final belongs = widget.products.any((p) => p.id == _productId && p.sectionId == v);
-                      if (!belongs) {
-                        _productId = null;
+              _SearchableSelectTile<int?>(
+                hint: 'All Sections',
+                selectedValue: _sectionId,
+                itemLabel: (v) {
+                  if (v == null) return 'All Sections';
+                  return widget.sections.where((s) => s.id == v).firstOrNull?.name ?? 'Unknown';
+                },
+                prefixIcon: Icons.category_outlined,
+                onTap: () async {
+                  final result = await showDialog<_SearchSelectResult<int?>>(
+                    context: context,
+                    builder: (context) => _SearchSelectDialog<int?>(
+                      title: 'Select Section',
+                      items: [null, ...widget.sections.map((s) => s.id)],
+                      itemLabel: (v) => v == null ? 'All Sections' : widget.sections.where((s) => s.id == v).firstOrNull?.name ?? 'Unknown',
+                      searchMatcher: (v, query) {
+                        if (v == null) return 'all sections'.contains(query.toLowerCase());
+                        final name = widget.sections.where((s) => s.id == v).firstOrNull?.name ?? 'Unknown';
+                        return name.toLowerCase().contains(query.toLowerCase());
+                      },
+                      selectedValue: _sectionId,
+                    ),
+                  );
+                  if (result != null) {
+                    setState(() {
+                      _sectionId = result.value;
+                      if (result.value != null) {
+                        final belongs = widget.products.any((p) => p.id == _productId && p.sectionId == result.value);
+                        if (!belongs) {
+                          _productId = null;
+                        }
                       }
-                    }
-                  });
+                    });
+                  }
                 },
               ),
               const SizedBox(height: 16),
@@ -962,19 +974,35 @@ class _FilterDialogState extends State<_FilterDialog> {
                       fontWeight: FontWeight.w500,
                       color: AppTheme.textSecondary)),
               const SizedBox(height: 6),
-              DropdownButtonFormField<int?>(
-                value: _productId,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.inventory_2_outlined,
-                      color: AppTheme.textMuted, size: 18),
-                ),
-                items: [
-                  const DropdownMenuItem(
-                      value: null, child: Text('All Products')),
-                  ..._filteredProducts.map((p) =>
-                      DropdownMenuItem(value: p.id, child: Text(p.name))),
-                ],
-                onChanged: (v) => setState(() => _productId = v),
+              _SearchableSelectTile<int?>(
+                hint: 'All Products',
+                selectedValue: _productId,
+                itemLabel: (v) {
+                  if (v == null) return 'All Products';
+                  return widget.products.where((p) => p.id == v).firstOrNull?.name ?? 'Unknown';
+                },
+                prefixIcon: Icons.inventory_2_outlined,
+                onTap: () async {
+                  final result = await showDialog<_SearchSelectResult<int?>>(
+                    context: context,
+                    builder: (context) => _SearchSelectDialog<int?>(
+                      title: 'Select Product',
+                      items: [null, ..._filteredProducts.map((p) => p.id)],
+                      itemLabel: (v) => v == null ? 'All Products' : widget.products.where((p) => p.id == v).firstOrNull?.name ?? 'Unknown',
+                      searchMatcher: (v, query) {
+                        if (v == null) return 'all products'.contains(query.toLowerCase());
+                        final name = widget.products.where((p) => p.id == v).firstOrNull?.name ?? 'Unknown';
+                        return name.toLowerCase().contains(query.toLowerCase());
+                      },
+                      selectedValue: _productId,
+                    ),
+                  );
+                  if (result != null) {
+                    setState(() {
+                      _productId = result.value;
+                    });
+                  }
+                },
               ),
               const SizedBox(height: 16),
               Row(
@@ -1074,3 +1102,200 @@ class _FilterDialogState extends State<_FilterDialog> {
     );
   }
 }
+
+// ─── Search Select Result Wrapper ─────────────────────────────────────────────
+class _SearchSelectResult<T> {
+  final T value;
+  _SearchSelectResult(this.value);
+}
+
+// ─── Search Select Dialog ─────────────────────────────────────────────────────
+class _SearchSelectDialog<T> extends StatefulWidget {
+  final String title;
+  final List<T> items;
+  final String Function(T) itemLabel;
+  final bool Function(T, String) searchMatcher;
+  final T? selectedValue;
+
+  const _SearchSelectDialog({
+    required this.title,
+    required this.items,
+    required this.itemLabel,
+    required this.searchMatcher,
+    this.selectedValue,
+  });
+
+  @override
+  State<_SearchSelectDialog<T>> createState() => _SearchSelectDialogState<T>();
+}
+
+class _SearchSelectDialogState<T> extends State<_SearchSelectDialog<T>> {
+  final _searchController = TextEditingController();
+  String _query = '';
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.items.where((item) {
+      if (_query.isEmpty) return true;
+      return widget.searchMatcher(item, _query);
+    }).toList();
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: AppTheme.bgCard,
+      child: Container(
+        width: 360,
+        constraints: const BoxConstraints(maxHeight: 450),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  widget.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              focusNode: _focusNode,
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppTheme.textMuted),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 16),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          'No results found',
+                          style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.border),
+                      itemBuilder: (ctx, i) {
+                        final item = filtered[i];
+                        final isSelected = item == widget.selectedValue;
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          title: Text(
+                            widget.itemLabel(item),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.check_rounded, color: AppTheme.primary, size: 18)
+                              : null,
+                          onTap: () => Navigator.pop(context, _SearchSelectResult<T>(item)),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Searchable Select Tile ──────────────────────────────────────────────────
+class _SearchableSelectTile<T> extends StatelessWidget {
+  final String hint;
+  final T? selectedValue;
+  final String Function(T?) itemLabel;
+  final IconData prefixIcon;
+  final VoidCallback onTap;
+
+  const _SearchableSelectTile({
+    required this.hint,
+    required this.selectedValue,
+    required this.itemLabel,
+    required this.prefixIcon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.bgSurface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Row(
+          children: [
+            Icon(prefixIcon, color: AppTheme.textMuted, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                selectedValue != null ? itemLabel(selectedValue) : hint,
+                style: TextStyle(
+                  color: selectedValue != null ? AppTheme.textPrimary : AppTheme.textMuted,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down_rounded, color: AppTheme.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

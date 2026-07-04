@@ -73,7 +73,7 @@ class StockEntry {
       date: DateTime.parse(map['date'] as String),
       billNo: map['bill_no'] as String,
       note: map['note'] as String?,
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: DateTime.parse(map['created_at'] as String).toLocal(),
       productName: map['product_name'] as String?,
       productUnit: map['product_unit'] as String?,
       sectionName: map['section_name'] as String?,

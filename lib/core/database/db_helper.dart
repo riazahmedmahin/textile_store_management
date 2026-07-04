@@ -164,9 +164,16 @@ class DatabaseHelper {
         if (billNo != null &&
             billNo.isNotEmpty &&
             !e.billNo.toLowerCase().contains(billNo.toLowerCase())) return false;
-        if (fromDate != null && e.date.isBefore(fromDate)) return false;
-        if (toDate != null && e.date.isAfter(toDate.add(const Duration(days: 1))))
-          return false;
+        if (fromDate != null) {
+          final startOfFromDate = DateTime(fromDate.year, fromDate.month, fromDate.day);
+          final startOfEntryDate = DateTime(e.date.year, e.date.month, e.date.day);
+          if (startOfEntryDate.isBefore(startOfFromDate)) return false;
+        }
+        if (toDate != null) {
+          final startOfToDate = DateTime(toDate.year, toDate.month, toDate.day);
+          final startOfEntryDate = DateTime(e.date.year, e.date.month, e.date.day);
+          if (startOfEntryDate.isAfter(startOfToDate)) return false;
+        }
         return true;
       }).toList()
         ..sort((a, b) {
