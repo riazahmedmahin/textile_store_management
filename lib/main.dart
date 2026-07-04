@@ -33,7 +33,7 @@ class TextileStoreApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => StockProvider()),
       ],
       child: MaterialApp(
-        title: 'KTL Store Manager',
+        title: 'KTL Store',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: Consumer<AuthProvider>(
