@@ -53,8 +53,7 @@ class TextileStoreApp extends StatelessWidget {
             }
             if (!auth.isAuthenticated) {
               // Update browser URL bar to /login on logout
-              SystemNavigator.routeInformationUpdated(
-                  uri: Uri.parse('/login'));
+              SystemNavigator.routeInformationUpdated(uri: Uri.parse('/login'));
               return const LoginScreen();
             }
             return const MainShell();
