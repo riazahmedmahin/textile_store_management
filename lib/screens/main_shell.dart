@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/section_provider.dart';
@@ -11,7 +12,8 @@ import 'store/store_view_screen.dart';
 enum AppView { admin, store }
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  final String? initialRoute;
+  const MainShell({super.key, this.initialRoute});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -68,9 +70,16 @@ class _MainShellState extends State<MainShell>
 
     final auth = context.read<AuthProvider>();
     _currentView = auth.role == 'store' ? AppView.store : AppView.admin;
+
+    // Parse initial route if provided (e.g., deep link)
+    if (widget.initialRoute != null) {
+      _parseRoute(widget.initialRoute!);
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SectionProvider>().loadSections();
       context.read<StockProvider>().loadDashboardStats();
+      _updateBrowserUrl();
     });
   }
 
@@ -126,6 +135,7 @@ class _MainShellState extends State<MainShell>
     _animController.reset();
     setState(() => _currentIndex = i);
     _animController.forward();
+    _updateBrowserUrl();
   }
 
   void _changeView(AppView v) {
@@ -135,6 +145,62 @@ class _MainShellState extends State<MainShell>
       _currentIndex = 0;
     });
     _animController.forward();
+    _updateBrowserUrl();
+  }
+
+  void _parseRoute(String route) {
+    final auth = context.read<AuthProvider>();
+    if (route == '/stock-entry') {
+      _currentView = AppView.store;
+      _currentIndex = 0;
+    } else if (route == '/sections') {
+      _currentView = AppView.store;
+      _currentIndex = 1;
+    } else if (route == '/transactions') {
+      if (auth.role == 'store') {
+        _currentView = AppView.store;
+        _currentIndex = 2;
+      } else {
+        _currentView = AppView.admin;
+        _currentIndex = 1;
+      }
+    } else {
+      // /dashboard or unknown → default home
+      if (auth.role == 'store') {
+        _currentView = AppView.store;
+        _currentIndex = 0;
+      } else {
+        _currentView = AppView.admin;
+        _currentIndex = 0;
+      }
+    }
+  }
+
+  void _updateBrowserUrl() {
+    String route = '/dashboard';
+    if (_currentView == AppView.store) {
+      switch (_currentIndex) {
+        case 0:
+          route = '/stock-entry';
+          break;
+        case 1:
+          route = '/sections';
+          break;
+        case 2:
+          route = '/transactions';
+          break;
+      }
+    } else {
+      switch (_currentIndex) {
+        case 0:
+          route = '/dashboard';
+          break;
+        case 1:
+          route = '/transactions';
+          break;
+      }
+    }
+    SystemNavigator.routeInformationUpdated(uri: Uri.parse(route));
   }
 
   @override

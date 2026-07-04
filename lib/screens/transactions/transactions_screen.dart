@@ -32,6 +32,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadEntries();
       context.read<ProductProvider>().loadAllProducts();
+      context.read<SectionProvider>().loadSections();
     });
   }
 
