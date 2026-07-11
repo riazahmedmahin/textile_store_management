@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -21,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isDataLoading = false;
   bool _showAllLowStock = false;
+  final ScrollController _sectionScrollController = ScrollController();
 
   @override
   void initState() {
@@ -28,6 +30,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshData();
     });
+  }
+
+  @override
+  void dispose() {
+    _sectionScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _refreshData() async {
@@ -1238,11 +1246,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               }
                             }
 
-                            return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: cardWidgets,
+                            return ScrollConfiguration(
+                              behavior: _AllDeviceScrollBehavior(),
+                              child: SingleChildScrollView(
+                                controller: _sectionScrollController,
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: cardWidgets,
+                                ),
                               ),
                             );
                           },
@@ -1574,4 +1587,16 @@ class _ActivityRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Custom ScrollBehavior that allows mouse, stylus, and touch to drag-scroll.
+/// This enables horizontal scrolling in the section summary cards on desktop/web.
+class _AllDeviceScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      };
 }
