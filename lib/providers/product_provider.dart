@@ -24,9 +24,15 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<void> loadAllProducts() async {
-    _isLoading = true;
-    notifyListeners();
+    if (_allProducts.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
     _allProducts = await _db.getAllProducts();
+    _productsBySection.clear();
+    for (final p in _allProducts) {
+      _productsBySection.putIfAbsent(p.sectionId, () => []).add(p);
+    }
     _isLoading = false;
     notifyListeners();
   }

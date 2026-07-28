@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -25,6 +26,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   DateTime? _toDate;
   String _typeFilter = 'all'; // 'all', 'in', 'out'
   final _searchController = TextEditingController();
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -38,18 +40,28 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _loadEntries() {
+  void _loadEntries({bool showLoading = true}) {
     context.read<StockProvider>().loadAllEntries(
           sectionId: _selectedSectionId,
           productId: _selectedProductId,
           billNo: _billNoQuery.isEmpty ? null : _billNoQuery,
           fromDate: _fromDate,
           toDate: _toDate,
+          showLoading: showLoading,
         );
+  }
+
+  void _onSearchChanged(String v) {
+    setState(() => _billNoQuery = v);
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _loadEntries(showLoading: false);
+    });
   }
 
   bool get _hasFilters =>
@@ -139,10 +151,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           horizontal: 10, vertical: 8),
                       isDense: true,
                     ),
-                    onChanged: (v) {
-                      setState(() => _billNoQuery = v);
-                      _loadEntries();
-                    },
+                    onChanged: _onSearchChanged,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -290,10 +299,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                         horizontal: 12, vertical: 10),
                     isDense: true,
                   ),
-                  onChanged: (v) {
-                    setState(() => _billNoQuery = v);
-                    _loadEntries();
-                  },
+                  onChanged: _onSearchChanged,
                 ),
               ),
               const SizedBox(width: 10),
@@ -481,12 +487,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           Expanded(
             child: Consumer<StockProvider>(
               builder: (context, sp, _) {
-                if (sp.isLoading) {
+                if (sp.isLoading && sp.allEntries.isEmpty) {
                   return const Center(
                       child: CircularProgressIndicator(strokeWidth: 2));
                 }
 
                 var entries = sp.allEntries;
+                if (_billNoQuery.trim().isNotEmpty) {
+                  entries = entries
+                      .where((e) => e.billNo
+                          .toLowerCase()
+                          .contains(_billNoQuery.trim().toLowerCase()))
+                      .toList();
+                }
                 if (_typeFilter != 'all') {
                   entries =
                       entries.where((e) => e.type == _typeFilter).toList();

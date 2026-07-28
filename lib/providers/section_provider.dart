@@ -11,8 +11,10 @@ class SectionProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<void> loadSections() async {
-    _isLoading = true;
-    notifyListeners();
+    if (_sections.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
     _sections = await _db.getSections();
     _isLoading = false;
     notifyListeners();

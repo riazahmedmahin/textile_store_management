@@ -108,27 +108,26 @@ class _MainShellState extends State<MainShell>
     }
   }
 
-  Widget _currentScreen() {
-    if (_currentView == AppView.store) {
-      switch (_currentIndex) {
-        case 0:
-          return const StoreViewScreen();
-        case 1:
-          return const SectionsListScreen();
-        case 2:
-          return const TransactionsScreen();
-        default:
-          return const StoreViewScreen();
-      }
-    }
-    switch (_currentIndex) {
-      case 0:
-        return const DashboardScreen();
-      case 1:
-        return const TransactionsScreen();
-      default:
-        return const DashboardScreen();
-    }
+  // Admin screens — kept alive in memory via IndexedStack
+  final List<Widget> _adminScreens = const [
+    DashboardScreen(),
+    TransactionsScreen(),
+  ];
+
+  // Store screens — kept alive in memory via IndexedStack
+  final List<Widget> _storeScreens = const [
+    StoreViewScreen(),
+    SectionsListScreen(),
+    TransactionsScreen(),
+  ];
+
+  Widget _buildIndexedStack() {
+    final screens = _currentView == AppView.admin ? _adminScreens : _storeScreens;
+    final index = _currentIndex.clamp(0, screens.length - 1);
+    return IndexedStack(
+      index: index,
+      children: screens,
+    );
   }
 
   void _changeIndex(int i) {
@@ -292,7 +291,7 @@ class _MainShellState extends State<MainShell>
           elevation: 0,
           child: sidebarWidget,
         ),
-        body: FadeTransition(opacity: _fadeAnim, child: _currentScreen()),
+        body: _buildIndexedStack(),
         bottomNavigationBar: _navItems.length > 1
             ? Container(
                 decoration: const BoxDecoration(
@@ -338,7 +337,7 @@ class _MainShellState extends State<MainShell>
         children: [
           sidebarWidget,
           Expanded(
-            child: FadeTransition(opacity: _fadeAnim, child: _currentScreen()),
+            child: _buildIndexedStack(),
           ),
         ],
       ),

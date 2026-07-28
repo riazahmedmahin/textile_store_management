@@ -28,7 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshData();
+      _refreshData(forceSpinner: false);
     });
   }
 
@@ -38,29 +38,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _refreshData() async {
+  Future<void> _refreshData({bool forceSpinner = false}) async {
     if (!mounted) return;
-    setState(() => _isDataLoading = true);
     final stockProvider = context.read<StockProvider>();
     final sectionProvider = context.read<SectionProvider>();
     final productProvider = context.read<ProductProvider>();
 
-    await stockProvider.loadDashboardStats();
-    await sectionProvider.loadSections();
-
-    // Load products and stock entries for each section
-    for (final section in sectionProvider.sections) {
-      if (section.id != null) {
-        await productProvider.loadProductsForSection(section.id!);
-        final products = productProvider.getProductsForSection(section.id!);
-        for (final product in products) {
-          if (product.id != null) {
-            await stockProvider.loadEntriesForProduct(
-                product.id!, product.initialStock);
-          }
-        }
-      }
+    // Only show full-screen spinner if we have no stats cached at all
+    if (stockProvider.dashboardStats.isEmpty || forceSpinner) {
+      setState(() => _isDataLoading = true);
     }
+
+    await Future.wait([
+      stockProvider.loadDashboardStats(forceLoading: forceSpinner),
+      sectionProvider.loadSections(),
+      productProvider.loadAllProducts(),
+    ]);
+
     if (mounted) {
       setState(() => _isDataLoading = false);
     }
@@ -187,7 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const Spacer(),
           OutlinedButton.icon(
-            onPressed: _refreshData,
+            onPressed: () => _refreshData(forceSpinner: true),
             icon: const Icon(Icons.refresh_rounded, size: 16),
             label: const Text('Refresh'),
           ),

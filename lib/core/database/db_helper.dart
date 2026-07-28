@@ -142,11 +142,30 @@ class DatabaseHelper {
     DateTime? toDate,
   }) async {
     try {
-      final response = await _supabase
+      dynamic query = _supabase
           .from('stock_entries')
           .select('*, products(*, sections(*))');
 
-      final list = response.map((m) {
+      if (productId != null) {
+        query = query.eq('product_id', productId);
+      }
+      if (billNo != null && billNo.trim().isNotEmpty) {
+        query = query.ilike('bill_no', '%${billNo.trim()}%');
+      }
+      if (fromDate != null) {
+        final startOfFromDate = DateTime(fromDate.year, fromDate.month, fromDate.day).toIso8601String();
+        query = query.gte('date', startOfFromDate);
+      }
+      if (toDate != null) {
+        final endOfToDate = DateTime(toDate.year, toDate.month, toDate.day, 23, 59, 59).toIso8601String();
+        query = query.lte('date', endOfToDate);
+      }
+
+      final response = await query
+          .order('date', ascending: false)
+          .order('created_at', ascending: false);
+
+      final list = (response as List).map((m) {
         final prodMap = m['products'] as Map<String, dynamic>?;
         final secMap = prodMap != null ? prodMap['sections'] as Map<String, dynamic>? : null;
         return StockEntry.fromMap({
@@ -158,28 +177,10 @@ class DatabaseHelper {
         });
       }).toList();
 
-      return list.where((e) {
-        if (productId != null && e.productId != productId) return false;
-        if (sectionId != null && e.sectionId != sectionId) return false;
-        if (billNo != null &&
-            billNo.isNotEmpty &&
-            !e.billNo.toLowerCase().contains(billNo.toLowerCase())) return false;
-        if (fromDate != null) {
-          final startOfFromDate = DateTime(fromDate.year, fromDate.month, fromDate.day);
-          final startOfEntryDate = DateTime(e.date.year, e.date.month, e.date.day);
-          if (startOfEntryDate.isBefore(startOfFromDate)) return false;
-        }
-        if (toDate != null) {
-          final startOfToDate = DateTime(toDate.year, toDate.month, toDate.day);
-          final startOfEntryDate = DateTime(e.date.year, e.date.month, e.date.day);
-          if (startOfEntryDate.isAfter(startOfToDate)) return false;
-        }
-        return true;
-      }).toList()
-        ..sort((a, b) {
-          final d = b.date.compareTo(a.date);
-          return d != 0 ? d : b.createdAt.compareTo(a.createdAt);
-        });
+      if (sectionId != null) {
+        return list.where((e) => e.sectionId == sectionId).toList();
+      }
+      return list;
     } catch (e) {
       return [];
     }
@@ -237,41 +238,9 @@ class DatabaseHelper {
 
   Future<Map<int, Map<String, dynamic>>> getSectionStats() async {
     try {
-      final products = await getAllProducts();
-      final entriesResponse = await _supabase
-          .from('stock_entries')
-          .select('product_id, type, quantity');
-
-      // Group products by section
-      final Map<int, List<Product>> bySection = {};
-      for (final p in products) {
-        bySection.putIfAbsent(p.sectionId, () => []).add(p);
-      }
-
-      // Compute current stock for each product
-      final Map<int, double> productStock = {};
-      for (final p in products) {
-        final productEntries = entriesResponse.where((e) => e['product_id'] == p.id!);
-        final totalIn = productEntries
-            .where((e) => e['type'] == 'in')
-            .fold(0.0, (s, e) => s + (e['quantity'] as num).toDouble());
-        final totalOut = productEntries
-            .where((e) => e['type'] == 'out')
-            .fold(0.0, (s, e) => s + (e['quantity'] as num).toDouble());
-        productStock[p.id!] = p.initialStock + totalIn - totalOut;
-      }
-
-      final Map<int, Map<String, dynamic>> result = {};
-      for (final entry in bySection.entries) {
-        final sectionId = entry.key;
-        final prods = entry.value;
-        final totalStock = prods.fold(0.0, (s, p) => s + (productStock[p.id!] ?? 0.0));
-        result[sectionId] = {
-          'product_count': prods.length,
-          'total_stock': totalStock,
-        };
-      }
-      return result;
+      final stats = await getDashboardStats();
+      final secStats = stats['section_stats'] as Map<int, Map<String, dynamic>>?;
+      return secStats ?? {};
     } catch (e) {
       return {};
     }
@@ -281,11 +250,15 @@ class DatabaseHelper {
 
   Future<Map<String, dynamic>> getDashboardStats() async {
     try {
-      final sections = await getSections();
-      final products = await getAllProducts();
-      final entriesResponse = await _supabase
-          .from('stock_entries')
-          .select('*, products(*, sections(*))');
+      final results = await Future.wait([
+        getSections(),
+        getAllProducts(),
+        _supabase.from('stock_entries').select('*, products(*, sections(*))'),
+      ]);
+
+      final sections = results[0] as List<AppSection>;
+      final products = results[1] as List<Product>;
+      final entriesResponse = results[2] as List<dynamic>;
 
       final entries = entriesResponse.map((m) {
         final prodMap = m['products'] as Map<String, dynamic>?;
@@ -322,10 +295,17 @@ class DatabaseHelper {
           .where((e) => e.type == 'out')
           .fold(0.0, (s, e) => s + e.quantity);
 
+      // Pre-group entries by productId for O(N) calculation
+      final Map<int, List<StockEntry>> entriesByProduct = {};
+      for (final e in entries) {
+        entriesByProduct.putIfAbsent(e.productId, () => []).add(e);
+      }
+
+      final Map<int, double> productStocks = {};
       int lowStockCount = 0;
       int outOfStockCount = 0;
       for (final p in products) {
-        final productEntries = entries.where((e) => e.productId == p.id!);
+        final productEntries = entriesByProduct[p.id!] ?? const [];
         final prodIn = productEntries
             .where((e) => e.type == 'in')
             .fold(0.0, (s, e) => s + e.quantity);
@@ -333,11 +313,29 @@ class DatabaseHelper {
             .where((e) => e.type == 'out')
             .fold(0.0, (s, e) => s + e.quantity);
         final currentStock = p.initialStock + prodIn - prodOut;
+        productStocks[p.id!] = currentStock;
         if (currentStock <= 0) {
           outOfStockCount++;
         } else if (currentStock < 5) {
           lowStockCount++;
         }
+      }
+
+      // Group products by section
+      final Map<int, List<Product>> bySection = {};
+      for (final p in products) {
+        bySection.putIfAbsent(p.sectionId, () => []).add(p);
+      }
+
+      final Map<int, Map<String, dynamic>> sectionStats = {};
+      for (final s in sections) {
+        if (s.id == null) continue;
+        final prods = bySection[s.id!] ?? const [];
+        final totalStock = prods.fold(0.0, (sum, p) => sum + (productStocks[p.id!] ?? 0.0));
+        sectionStats[s.id!] = {
+          'product_count': prods.length,
+          'total_stock': totalStock,
+        };
       }
 
       final recent = List<StockEntry>.from(entries)
@@ -353,6 +351,9 @@ class DatabaseHelper {
         'low_stock_count': lowStockCount,
         'out_of_stock_count': outOfStockCount,
         'recent_entries': recent.take(10).toList(),
+        'product_stocks': productStocks,
+        'section_stats': sectionStats,
+        'all_entries': recent,
       };
     } catch (e) {
       return {
@@ -365,6 +366,8 @@ class DatabaseHelper {
         'low_stock_count': 0,
         'out_of_stock_count': 0,
         'recent_entries': <StockEntry>[],
+        'section_stats': <int, Map<String, dynamic>>{},
+        'all_entries': <StockEntry>[],
       };
     }
   }

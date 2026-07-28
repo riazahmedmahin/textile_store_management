@@ -62,15 +62,57 @@ class StockProvider extends ChangeNotifier {
     await loadDashboardStats();
   }
 
+  // ─── Dashboard Stats ─────────────────────────────────────────────────────────
+
+  Map<int, Map<String, dynamic>> _sectionStats = {};
+  Map<int, Map<String, dynamic>> get sectionStats => _sectionStats;
+
+  Future<void> loadDashboardStats({bool forceLoading = false}) async {
+    // Only set _isLoading true if we have no cached stats yet or if explicitly forced
+    if (_dashboardStats.isEmpty || forceLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
+    final stats = await _db.getDashboardStats();
+    _dashboardStats = stats;
+    
+    final secStats = stats['section_stats'] as Map<int, Map<String, dynamic>>?;
+    if (secStats != null) {
+      _sectionStats = secStats;
+    }
+
+    final cachedEntries = stats['all_entries'] as List<StockEntry>?;
+    if (cachedEntries != null && cachedEntries.isNotEmpty) {
+      _allEntries = cachedEntries;
+    }
+    
+    final Map<int, double>? pStocks = _dashboardStats['product_stocks'] as Map<int, double>?;
+    if (pStocks != null) {
+      _currentStock.addAll(pStocks);
+    }
+    
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<void> loadAllEntries({
     int? sectionId,
     int? productId,
     String? billNo,
     DateTime? fromDate,
     DateTime? toDate,
+    bool showLoading = true,
   }) async {
-    _isLoading = true;
-    notifyListeners();
+    // If showLoading is true but we already have cached entries and no active search/filters,
+    // show existing data instantly and update silently
+    final hasFilters = sectionId != null || productId != null || (billNo != null && billNo.isNotEmpty) || fromDate != null || toDate != null;
+    
+    if (showLoading && (_allEntries.isEmpty || hasFilters)) {
+      _isLoading = true;
+      notifyListeners();
+    }
+    
     _allEntries = await _db.getAllStockEntries(
       sectionId: sectionId,
       productId: productId,
@@ -79,17 +121,6 @@ class StockProvider extends ChangeNotifier {
       toDate: toDate,
     );
     _isLoading = false;
-    notifyListeners();
-  }
-
-  // ─── Dashboard Stats ─────────────────────────────────────────────────────────
-
-  Map<int, Map<String, dynamic>> _sectionStats = {};
-  Map<int, Map<String, dynamic>> get sectionStats => _sectionStats;
-
-  Future<void> loadDashboardStats() async {
-    _dashboardStats = await _db.getDashboardStats();
-    _sectionStats = await _db.getSectionStats();
     notifyListeners();
   }
 }

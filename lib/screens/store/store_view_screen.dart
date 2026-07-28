@@ -43,6 +43,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SectionProvider>().loadSections();
+      context.read<ProductProvider>().loadAllProducts();
     });
   }
 
