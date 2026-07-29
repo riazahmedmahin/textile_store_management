@@ -37,13 +37,16 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
         children: [
           // Top Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 24,
+                vertical: isMobile ? 10 : 16),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               border: Border(bottom: BorderSide(color: AppTheme.border)),
@@ -57,9 +60,10 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                     backgroundColor: AppTheme.bgSurface,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.all(8),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Container(
                   width: 36,
                   height: 36,
@@ -76,24 +80,27 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                     size: 18,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isIn ? 'Stock In' : 'Stock Out',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isIn ? 'Stock In' : 'Stock Out',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
-                    ),
-                    Text(
-                      widget.product.name,
-                      style: const TextStyle(
-                          fontSize: 13, color: AppTheme.textMuted),
-                    ),
-                  ],
+                      Text(
+                        widget.product.name,
+                        style: const TextStyle(
+                            fontSize: 13, color: AppTheme.textMuted),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

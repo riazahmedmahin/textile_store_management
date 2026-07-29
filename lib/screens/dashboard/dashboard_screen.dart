@@ -154,37 +154,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTopBar() {
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 24, vertical: isMobile ? 12 : 16),
       decoration: const BoxDecoration(
         color: AppTheme.bgCard,
         border: Border(bottom: BorderSide(color: AppTheme.border)),
       ),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Dashboard',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Dashboard',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
-              ),
-              Text(
-                DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
-                style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
-              ),
-            ],
+                Text(
+                  DateFormat(isMobile ? 'dd MMM yyyy' : 'EEEE, dd MMMM yyyy')
+                      .format(DateTime.now()),
+                  style:
+                      const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
-          OutlinedButton.icon(
-            onPressed: () => _refreshData(forceSpinner: true),
-            icon: const Icon(Icons.refresh_rounded, size: 16),
-            label: const Text('Refresh'),
-          ),
+          const SizedBox(width: 8),
+          isMobile
+              ? IconButton(
+                  onPressed: () => _refreshData(forceSpinner: true),
+                  icon: const Icon(Icons.refresh_rounded,
+                      color: AppTheme.primary, size: 20),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.primary.withOpacity(0.08),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                )
+              : OutlinedButton.icon(
+                  onPressed: () => _refreshData(forceSpinner: true),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Refresh'),
+                ),
         ],
       ),
     );
@@ -919,12 +938,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: AppTheme.warning, size: 18),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
-                    'Recent Transactions History',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
+                  const Expanded(
+                    child: Text(
+                      'Recent Transactions History',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

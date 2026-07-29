@@ -39,13 +39,16 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
         children: [
           // Top bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 24,
+                vertical: isMobile ? 10 : 16),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               border: Border(bottom: BorderSide(color: AppTheme.border)),
@@ -59,9 +62,10 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                     backgroundColor: AppTheme.bgSurface,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.all(8),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Container(
                   width: 36,
                   height: 36,
@@ -75,36 +79,55 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                     size: 18,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.section.name,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.section.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const Text(
-                      'Product Management',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                  ],
+                      if (!isMobile)
+                        const Text(
+                          'Product Management',
+                          style:
+                              TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                        ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: () => _showAddProduct(context),
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('Add Product'),
-                ),
+                const SizedBox(width: 8),
+                isMobile
+                    ? IconButton(
+                        onPressed: () => _showAddProduct(context),
+                        icon: const Icon(Icons.add_rounded,
+                            color: AppTheme.primary),
+                        tooltip: 'Add Product',
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppTheme.primary.withOpacity(0.08),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.all(8),
+                        ),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: () => _showAddProduct(context),
+                        icon: const Icon(Icons.add_rounded, size: 16),
+                        label: const Text('Add Product'),
+                      ),
               ],
             ),
           ),
           // Search bar
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+            padding: EdgeInsets.fromLTRB(
+                isMobile ? 16 : 24, 12, isMobile ? 16 : 24, 12),
             color: AppTheme.bgCard,
             child: TextField(
               controller: _searchController,
@@ -221,7 +244,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(isMobile ? 16 : 24),
                   itemCount: products.length,
                   itemBuilder: (ctx, i) => _ProductRow(
                     product: products[i],

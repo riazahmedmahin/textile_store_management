@@ -27,13 +27,16 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
         children: [
           // Top Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 24,
+                vertical: isMobile ? 10 : 16),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               border: Border(bottom: BorderSide(color: AppTheme.border)),
@@ -47,27 +50,34 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                     backgroundColor: AppTheme.bgSurface,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.all(8),
                   ),
                 ),
-                const SizedBox(width: 14),
-                const Icon(Icons.history_rounded, color: AppTheme.primary, size: 22),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${widget.product.name} — History',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
+                const SizedBox(width: 8),
+                const Icon(Icons.history_rounded,
+                    color: AppTheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${widget.product.name} — History',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const Text(
-                      'Complete stock movement log',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                  ],
+                      if (!isMobile)
+                        const Text(
+                          'Complete stock movement log',
+                          style:
+                              TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -113,7 +123,8 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                                   ),
                                 )
                               : ListView.builder(
-                                  padding: const EdgeInsets.all(24),
+                                  padding: EdgeInsets.all(
+                                      isMobile ? 16 : 24),
                                   itemCount: entries.length,
                                   itemBuilder: (ctx, i) => _EntryRow(
                                       entry: entries[i],
@@ -244,6 +255,7 @@ class _EntryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIn = entry.type == 'in';
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
@@ -254,125 +266,178 @@ class _EntryRow extends StatelessWidget {
           color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.2),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.2),
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color:
+                      (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: (isIn ? AppTheme.success : AppTheme.danger)
+                        .withOpacity(0.2),
+                  ),
+                ),
+                child: Icon(
+                  isIn
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                  color: isIn ? AppTheme.success : AppTheme.danger,
+                  size: 18,
+                ),
               ),
-            ),
-            child: Icon(
-              isIn ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-              color: isIn ? AppTheme.success : AppTheme.danger,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: (isIn ? AppTheme.success : AppTheme.danger)
-                            .withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isIn ? 'STOCK IN' : 'STOCK OUT',
-                        style: TextStyle(
-                          color: isIn ? AppTheme.success : AppTheme.danger,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     Row(
                       children: [
-                        const Icon(Icons.receipt_outlined,
-                            size: 12, color: AppTheme.textMuted),
-                        const SizedBox(width: 3),
-                        Text(
-                          'Bill: ${entry.billNo}',
-                          style: const TextStyle(
-                              color: AppTheme.textMuted, fontSize: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (isIn ? AppTheme.success : AppTheme.danger)
+                                .withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isIn ? 'STOCK IN' : 'STOCK OUT',
+                            style: TextStyle(
+                              color: isIn ? AppTheme.success : AppTheme.danger,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(Icons.receipt_outlined,
+                                  size: 12, color: AppTheme.textMuted),
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: Text(
+                                  'Bill: ${entry.billNo}',
+                                  style: const TextStyle(
+                                      color: AppTheme.textMuted, fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
+                    if (entry.note != null && entry.note!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        entry.note!,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                if (entry.note != null && entry.note!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
                   Text(
-                    entry.note!,
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
+                    '${isIn ? '+' : '-'}${entry.quantity.toStringAsFixed(1)} ${product.unit}',
+                    style: TextStyle(
+                      color: isIn ? AppTheme.success : AppTheme.danger,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
                     ),
                   ),
+                  Text(
+                    DateFormat('dd MMM yyyy').format(entry.date),
+                    style: const TextStyle(
+                        color: AppTheme.textMuted, fontSize: 11),
+                  ),
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${isIn ? '+' : '-'}${entry.quantity.toStringAsFixed(1)} ${product.unit}',
-                style: TextStyle(
-                  color: isIn ? AppTheme.success : AppTheme.danger,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
+              ),
+              if (!isMobile) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _showEditDialog(context),
+                  icon: const Icon(Icons.edit_outlined,
+                      color: AppTheme.primary, size: 17),
+                  tooltip: 'Edit Entry',
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.primary.withOpacity(0.08),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.all(6),
+                  ),
                 ),
-              ),
-              Text(
-                DateFormat('dd MMM yyyy').format(entry.date),
-                style:
-                    const TextStyle(color: AppTheme.textMuted, fontSize: 11),
-              ),
+                const SizedBox(width: 6),
+                IconButton(
+                  onPressed: () => _confirmDelete(context),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: AppTheme.danger, size: 17),
+                  tooltip: 'Delete Entry',
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.danger.withOpacity(0.08),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.all(6),
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(width: 8),
-          // Edit Button
-          IconButton(
-            onPressed: () => _showEditDialog(context),
-            icon: const Icon(Icons.edit_outlined,
-                color: AppTheme.primary, size: 17),
-            tooltip: 'Edit Entry',
-            style: IconButton.styleFrom(
-              backgroundColor: AppTheme.primary.withOpacity(0.08),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.all(6),
+          if (isMobile) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showEditDialog(context),
+                  icon: const Icon(Icons.edit_outlined, size: 14),
+                  label: const Text('Edit', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    backgroundColor: AppTheme.primary.withOpacity(0.06),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () => _confirmDelete(context),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 14),
+                  label: const Text('Delete', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.danger,
+                    backgroundColor: AppTheme.danger.withOpacity(0.06),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 6),
-          // Delete Button
-          IconButton(
-            onPressed: () => _confirmDelete(context),
-            icon: const Icon(Icons.delete_outline_rounded,
-                color: AppTheme.danger, size: 17),
-            tooltip: 'Delete Entry',
-            style: IconButton.styleFrom(
-              backgroundColor: AppTheme.danger.withOpacity(0.08),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.all(6),
-            ),
-          ),
+          ],
         ],
       ),
     );

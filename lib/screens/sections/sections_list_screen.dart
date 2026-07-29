@@ -11,42 +11,60 @@ class SectionsListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
         children: [
           // Top Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 16 : 24,
+                vertical: isMobile ? 12 : 16),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               border: Border(bottom: BorderSide(color: AppTheme.border)),
             ),
             child: Row(
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Sections',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Sections',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Manage your store sections',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                    ),
-                  ],
+                      if (!isMobile)
+                        const Text(
+                          'Manage your store sections',
+                          style:
+                              TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                        ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: () => _showAddSection(context),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Add Section'),
-                ),
+                isMobile
+                    ? IconButton(
+                        onPressed: () => _showAddSection(context),
+                        icon: const Icon(Icons.add_rounded,
+                            color: AppTheme.primary),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppTheme.primary.withOpacity(0.08),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.all(8),
+                        ),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: () => _showAddSection(context),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Add Section'),
+                      ),
               ],
             ),
           ),
@@ -108,14 +126,15 @@ class SectionsListScreen extends StatelessWidget {
   }
 
   Widget _buildSectionsGrid(BuildContext context, SectionProvider provider) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 340,
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: isMobile ? double.infinity : 340,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.4,
+          childAspectRatio: isMobile ? 1.5 : 1.4,
         ),
         itemCount: provider.sections.length,
         itemBuilder: (context, i) {
