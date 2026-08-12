@@ -41,10 +41,15 @@ class _MainShellState extends State<MainShell>
 
   final List<_NavItem> _storeNavItems = const [
     _NavItem(
+        icon: Icons.dashboard_outlined,
+        activeIcon: Icons.dashboard_rounded,
+        label: 'Dashboard',
+        color: Color(0xFF6366F1)),
+    _NavItem(
         icon: Icons.inventory_2_outlined,
         activeIcon: Icons.inventory_2_rounded,
         label: 'Stock Entry',
-        color: Color(0xFF6366F1)),
+        color: Color(0xFF8B5CF6)),
     _NavItem(
         icon: Icons.category_outlined,
         activeIcon: Icons.category_rounded,
@@ -98,10 +103,12 @@ class _MainShellState extends State<MainShell>
     }
     switch (_currentIndex) {
       case 0:
-        return 'Stock Entry';
+        return 'Dashboard';
       case 1:
-        return 'Sections';
+        return 'Stock Entry';
       case 2:
+        return 'Sections';
+      case 3:
         return 'Transactions';
       default:
         return 'Store';
@@ -116,6 +123,7 @@ class _MainShellState extends State<MainShell>
 
   // Store screens — kept alive in memory via IndexedStack
   final List<Widget> _storeScreens = const [
+    DashboardScreen(),
     StoreViewScreen(),
     SectionsListScreen(),
     TransactionsScreen(),
@@ -151,14 +159,14 @@ class _MainShellState extends State<MainShell>
     final auth = context.read<AuthProvider>();
     if (route == '/stock-entry') {
       _currentView = AppView.store;
-      _currentIndex = 0;
+      _currentIndex = 1;
     } else if (route == '/sections') {
       _currentView = AppView.store;
-      _currentIndex = 1;
+      _currentIndex = 2;
     } else if (route == '/transactions') {
       if (auth.role == 'store') {
         _currentView = AppView.store;
-        _currentIndex = 2;
+        _currentIndex = 3;
       } else {
         _currentView = AppView.admin;
         _currentIndex = 1;
@@ -180,12 +188,15 @@ class _MainShellState extends State<MainShell>
     if (_currentView == AppView.store) {
       switch (_currentIndex) {
         case 0:
-          route = '/stock-entry';
+          route = '/dashboard';
           break;
         case 1:
-          route = '/sections';
+          route = '/stock-entry';
           break;
         case 2:
+          route = '/sections';
+          break;
+        case 3:
           route = '/transactions';
           break;
       }

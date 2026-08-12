@@ -30,6 +30,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     'pair',
     'gram',
     'yard',
+    'packed',
+    'pound',
   ];
 
   @override
