@@ -403,13 +403,10 @@ class _Sidebar extends StatelessWidget {
                     Container(
                       width: 44,
                       height: 44,
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF818CF8), Color(0xFF4F46E5)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFF4F46E5).withAlpha(120),
@@ -418,8 +415,15 @@ class _Sidebar extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.storefront_rounded,
-                          color: Colors.white, size: 24),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Column(
