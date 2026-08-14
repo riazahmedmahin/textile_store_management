@@ -12,6 +12,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _isAuthenticated;
   String? get email => _email;
   String? get role => _role;
+  bool get canEdit => _role == 'store';
+  bool get isReadOnly => _role != 'store';
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -47,7 +49,10 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final cleanEmail = email.trim().toLowerCase();
+    var cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.contains('@')) {
+      cleanEmail = '$cleanEmail@ktlbd.com';
+    }
     final cleanPassword = password.trim();
 
     try {
@@ -59,10 +64,7 @@ class AuthProvider extends ChangeNotifier {
       if (response.session != null && response.user != null) {
         _isAuthenticated = true;
         _email = response.user!.email;
-        _role = response.user!.userMetadata?['role'] as String?;
-        _role ??= (_email?.toLowerCase().contains('admin') ?? false)
-            ? 'admin'
-            : 'store';
+        _role = cleanEmail.contains('store') ? 'store' : 'admin';
         notifyListeners();
         return true;
       }
@@ -76,8 +78,7 @@ class AuthProvider extends ChangeNotifier {
                   cleanEmail == 'store@ktlbd.com') &&
               cleanPassword == '123456')) {
         try {
-          final signUpRole =
-              cleanEmail == 'admin@ktlbd.com' ? 'admin' : 'store';
+          final signUpRole = cleanEmail.contains('store') ? 'store' : 'admin';
           final signUpResponse = await _supabase.auth.signUp(
             email: cleanEmail,
             password: cleanPassword,

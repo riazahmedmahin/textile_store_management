@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/stock_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/section.dart';
 import '../../models/product.dart';
@@ -40,6 +41,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
+    final canEdit = context.watch<AuthProvider>().canEdit;
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
@@ -101,25 +103,27 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                isMobile
-                    ? IconButton(
-                        onPressed: () => _showAddProduct(context),
-                        icon: const Icon(Icons.add_rounded,
-                            color: AppTheme.primary),
-                        tooltip: 'Add Product',
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppTheme.primary.withOpacity(0.08),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.all(8),
+                if (canEdit) ...[
+                  const SizedBox(width: 8),
+                  isMobile
+                      ? IconButton(
+                          onPressed: () => _showAddProduct(context),
+                          icon: const Icon(Icons.add_rounded,
+                              color: AppTheme.primary),
+                          tooltip: 'Add Product',
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppTheme.primary.withOpacity(0.08),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: () => _showAddProduct(context),
+                          icon: const Icon(Icons.add_rounded, size: 16),
+                          label: const Text('Add Product'),
                         ),
-                      )
-                    : ElevatedButton.icon(
-                        onPressed: () => _showAddProduct(context),
-                        icon: const Icon(Icons.add_rounded, size: 16),
-                        label: const Text('Add Product'),
-                      ),
+                ],
               ],
             ),
           ),
@@ -215,12 +219,14 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                           style: TextStyle(
                               color: AppTheme.textMuted, fontSize: 13),
                         ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: () => _showAddProduct(context),
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Add Product'),
-                        ),
+                        if (canEdit) ...[
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () => _showAddProduct(context),
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Add Product'),
+                          ),
+                        ],
                       ],
                     ),
                   );
@@ -305,6 +311,7 @@ class _ProductRowState extends State<_ProductRow> {
 
   @override
   Widget build(BuildContext context) {
+    final canEdit = context.watch<AuthProvider>().canEdit;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -391,66 +398,70 @@ class _ProductRowState extends State<_ProductRow> {
                     );
                   },
                 ),
-                const SizedBox(width: 8),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded,
-                      color: AppTheme.textMuted, size: 18),
-                  onSelected: (v) {
-                    if (v == 'edit') {
-                      showDialog(
-                        context: context,
-                        builder: (_) => ProductFormDialog(
-                          sectionId: widget.product.sectionId,
-                          product: widget.product,
-                        ),
-                      );
-                    } else if (v == 'delete') {
-                      _confirmDelete(context);
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(children: [
-                        Icon(Icons.edit_outlined,
-                            size: 16, color: AppTheme.primary),
-                        SizedBox(width: 8),
-                        Text('Edit', style: TextStyle(fontSize: 14)),
-                      ]),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(children: [
-                        Icon(Icons.delete_outline,
-                            size: 16, color: AppTheme.danger),
-                        SizedBox(width: 8),
-                        Text('Delete',
-                            style: TextStyle(
-                                color: AppTheme.danger, fontSize: 14)),
-                      ]),
-                    ),
-                  ],
-                ),
+                if (canEdit) ...[
+                  const SizedBox(width: 8),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded,
+                        color: AppTheme.textMuted, size: 18),
+                    onSelected: (v) {
+                      if (v == 'edit') {
+                        showDialog(
+                          context: context,
+                          builder: (_) => ProductFormDialog(
+                            sectionId: widget.product.sectionId,
+                            product: widget.product,
+                          ),
+                        );
+                      } else if (v == 'delete') {
+                        _confirmDelete(context);
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(children: [
+                          Icon(Icons.edit_outlined,
+                              size: 16, color: AppTheme.primary),
+                          SizedBox(width: 8),
+                          Text('Edit', style: TextStyle(fontSize: 14)),
+                        ]),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(children: [
+                          Icon(Icons.delete_outline,
+                              size: 16, color: AppTheme.danger),
+                          SizedBox(width: 8),
+                          Text('Delete',
+                              style: TextStyle(
+                                  color: AppTheme.danger, fontSize: 14)),
+                        ]),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
           const Divider(height: 1),
           Row(
             children: [
-              _ActionBtn(
-                icon: Icons.arrow_downward_rounded,
-                label: 'Stock In',
-                color: AppTheme.success,
-                onTap: () => _openEntry(context, 'in'),
-              ),
-              Container(width: 1, height: 36, color: AppTheme.border),
-              _ActionBtn(
-                icon: Icons.arrow_upward_rounded,
-                label: 'Stock Issue',
-                color: AppTheme.danger,
-                onTap: () => _openEntry(context, 'out'),
-              ),
-              Container(width: 1, height: 36, color: AppTheme.border),
+              if (canEdit) ...[
+                _ActionBtn(
+                  icon: Icons.arrow_downward_rounded,
+                  label: 'Stock In',
+                  color: AppTheme.success,
+                  onTap: () => _openEntry(context, 'in'),
+                ),
+                Container(width: 1, height: 36, color: AppTheme.border),
+                _ActionBtn(
+                  icon: Icons.arrow_upward_rounded,
+                  label: 'Stock Issue',
+                  color: AppTheme.danger,
+                  onTap: () => _openEntry(context, 'out'),
+                ),
+                Container(width: 1, height: 36, color: AppTheme.border),
+              ],
               _ActionBtn(
                 icon: Icons.history_rounded,
                 label: 'History',

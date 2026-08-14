@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/stock_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/stock_entry.dart';
@@ -256,6 +257,7 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIn = entry.type == 'in';
     final isMobile = MediaQuery.of(context).size.width < 800;
+    final canEdit = context.watch<AuthProvider>().canEdit;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
@@ -369,7 +371,7 @@ class _EntryRow extends StatelessWidget {
                   ),
                 ],
               ),
-              if (!isMobile) ...[
+              if (canEdit && !isMobile) ...[
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: () => _showEditDialog(context),
@@ -399,7 +401,7 @@ class _EntryRow extends StatelessWidget {
               ],
             ],
           ),
-          if (isMobile) ...[
+          if (canEdit && isMobile) ...[
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,

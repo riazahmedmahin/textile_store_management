@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/section_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/section.dart';
 import 'section_detail_screen.dart';
@@ -12,6 +13,7 @@ class SectionsListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
+    final canEdit = context.watch<AuthProvider>().canEdit;
     return Scaffold(
       backgroundColor: AppTheme.bgPage,
       body: Column(
@@ -47,23 +49,24 @@ class SectionsListScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                isMobile
-                    ? IconButton(
-                        onPressed: () => _showAddSection(context),
-                        icon: const Icon(Icons.add_rounded,
-                            color: AppTheme.primary),
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppTheme.primary.withOpacity(0.08),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.all(8),
+                if (canEdit)
+                  isMobile
+                      ? IconButton(
+                          onPressed: () => _showAddSection(context),
+                          icon: const Icon(Icons.add_rounded,
+                              color: AppTheme.primary),
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppTheme.primary.withOpacity(0.08),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: () => _showAddSection(context),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Add Section'),
                         ),
-                      )
-                    : ElevatedButton.icon(
-                        onPressed: () => _showAddSection(context),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Add Section'),
-                      ),
               ],
             ),
           ),
@@ -105,12 +108,14 @@ class SectionsListScreen extends StatelessWidget {
                           'Create your first section to get started',
                           style: TextStyle(color: AppTheme.textMuted),
                         ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: () => _showAddSection(context),
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Add First Section'),
-                        ),
+                        if (canEdit) ...[
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () => _showAddSection(context),
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Add First Section'),
+                          ),
+                        ],
                       ],
                     ),
                   );
@@ -157,6 +162,7 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canEdit = context.watch<AuthProvider>().canEdit;
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.bgCard,
@@ -210,42 +216,43 @@ class _SectionCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded,
-                          color: AppTheme.textMuted, size: 18),
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          showDialog(
-                            context: context,
-                            builder: (_) => SectionFormDialog(section: section),
-                          );
-                        } else if (value == 'delete') {
-                          _confirmDelete(context);
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(children: [
-                            Icon(Icons.edit_outlined,
-                                color: AppTheme.primary, size: 16),
-                            SizedBox(width: 8),
-                            Text('Edit', style: TextStyle(fontSize: 14)),
-                          ]),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(children: [
-                            Icon(Icons.delete_outline,
-                                color: AppTheme.danger, size: 16),
-                            SizedBox(width: 8),
-                            Text('Delete',
-                                style: TextStyle(
-                                    color: AppTheme.danger, fontSize: 14)),
-                          ]),
-                        ),
-                      ],
-                    ),
+                    if (canEdit)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert_rounded,
+                            color: AppTheme.textMuted, size: 18),
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            showDialog(
+                              context: context,
+                              builder: (_) => SectionFormDialog(section: section),
+                            );
+                          } else if (value == 'delete') {
+                            _confirmDelete(context);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(children: [
+                              Icon(Icons.edit_outlined,
+                                  color: AppTheme.primary, size: 16),
+                              SizedBox(width: 8),
+                              Text('Edit', style: TextStyle(fontSize: 14)),
+                            ]),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(children: [
+                              Icon(Icons.delete_outline,
+                                  color: AppTheme.danger, size: 16),
+                              SizedBox(width: 8),
+                              Text('Delete',
+                                  style: TextStyle(
+                                      color: AppTheme.danger, fontSize: 14)),
+                            ]),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
                 const Spacer(),

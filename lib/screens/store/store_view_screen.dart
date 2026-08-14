@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../providers/section_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/stock_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/section.dart';
 import '../../models/product.dart';
@@ -384,6 +385,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
   }
 
   Widget _buildEntryForm(bool isMobile) {
+    final canEdit = context.watch<AuthProvider>().canEdit;
     return SingleChildScrollView(
       padding: EdgeInsets.all(isMobile ? 16 : 28),
       child: Center(
@@ -394,6 +396,33 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (!canEdit) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.warning.withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.visibility_rounded, color: AppTheme.warning, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Read-Only Mode (Admin) — Log in as Store user to submit stock entries.',
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (isMobile) ...[
                   TextButton.icon(
                     onPressed: () =>
@@ -653,7 +682,7 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                           : AppTheme.danger,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: _isSaving ? null : _submit,
+                    onPressed: (canEdit && !_isSaving) ? _submit : null,
                     child: _isSaving
                         ? const SizedBox(
                             width: 20,
@@ -661,9 +690,11 @@ class _StoreViewScreenState extends State<StoreViewScreen> {
                             child: CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2))
                         : Text(
-                            _type == 'in'
-                                ? '✓  Save Stock In'
-                                : '✓  Save Stock Out',
+                            !canEdit
+                                ? '👁  Read-Only Mode (Admin)'
+                                : _type == 'in'
+                                    ? '✓  Save Stock In'
+                                    : '✓  Save Stock Out',
                             style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600),

@@ -42,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             backgroundColor: AppTheme.danger,
             content: Text(
-              authProvider.errorMessage ?? 'Invalid credentials! Use admin@ktlbd.com or store@ktlbd.com with pass 123456.',
+              authProvider.errorMessage ?? 'Invalid credentials! Use admin@ktlbd.com (View Only) or store@ktlbd.com (Store Edit) with pass 123456.',
               style: const TextStyle(color: Colors.white),
             ),
           ),
