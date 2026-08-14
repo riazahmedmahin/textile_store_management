@@ -44,6 +44,7 @@ class PdfReportHelper {
     final totalOut = sortedEntries
         .where((e) => e.type == 'out')
         .fold(0.0, (sum, e) => sum + e.quantity);
+    final availableStock = totalIn - totalOut;
 
     pdf.addPage(
       pw.MultiPage(
@@ -191,6 +192,10 @@ class PdfReportHelper {
                     '${totalIn.toStringAsFixed(1)} units', PdfColors.green900),
                 _buildStatBox('Total Issued',
                     '${totalOut.toStringAsFixed(1)} units', PdfColors.red900),
+                _buildStatBox(
+                    'Available Stock',
+                    '${availableStock.toStringAsFixed(1)} units',
+                    availableStock >= 0 ? PdfColors.indigo900 : PdfColors.red900),
               ],
             ),
             pw.SizedBox(height: 20),
