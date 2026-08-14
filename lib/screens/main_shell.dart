@@ -130,7 +130,8 @@ class _MainShellState extends State<MainShell>
   ];
 
   Widget _buildIndexedStack() {
-    final screens = _currentView == AppView.admin ? _adminScreens : _storeScreens;
+    final screens =
+        _currentView == AppView.admin ? _adminScreens : _storeScreens;
     final index = _currentIndex.clamp(0, screens.length - 1);
     return IndexedStack(
       index: index,

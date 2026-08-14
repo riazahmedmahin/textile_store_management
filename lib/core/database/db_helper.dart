@@ -339,7 +339,11 @@ class DatabaseHelper {
       }
 
       final recent = List<StockEntry>.from(entries)
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        ..sort((a, b) {
+          final cmp = b.date.compareTo(a.date);
+          if (cmp != 0) return cmp;
+          return b.createdAt.compareTo(a.createdAt);
+        });
 
       return {
         'section_count': sections.length,

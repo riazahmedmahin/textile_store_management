@@ -27,14 +27,21 @@ class PdfReportHelper {
     final pdf = pw.Document(theme: theme);
 
     final dateFormat = DateFormat('dd MMM yyyy');
+    final sortedEntries = List<StockEntry>.from(entries)
+      ..sort((a, b) {
+        final cmp = b.date.compareTo(a.date);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
+
     final dateRangeStr = (fromDate != null || toDate != null)
         ? '${fromDate != null ? dateFormat.format(fromDate) : "Beginning"} to ${toDate != null ? dateFormat.format(toDate) : "Present"}'
         : 'All Time';
 
-    final totalIn = entries
+    final totalIn = sortedEntries
         .where((e) => e.type == 'in')
         .fold(0.0, (sum, e) => sum + e.quantity);
-    final totalOut = entries
+    final totalOut = sortedEntries
         .where((e) => e.type == 'out')
         .fold(0.0, (sum, e) => sum + e.quantity);
 
@@ -179,7 +186,7 @@ class PdfReportHelper {
               mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
               children: [
                 _buildStatBox(
-                    'Total Records', '${entries.length}', PdfColors.blue900),
+                    'Total Records', '${sortedEntries.length}', PdfColors.blue900),
                 _buildStatBox('Total Stock In',
                     '${totalIn.toStringAsFixed(1)} units', PdfColors.green900),
                 _buildStatBox('Total Issued',
@@ -199,7 +206,7 @@ class PdfReportHelper {
                 'Qty',
                 'Notes'
               ],
-              data: entries.map((e) {
+              data: sortedEntries.map((e) {
                 final isIn = e.type == 'in';
                 return [
                   dateFormat.format(e.date),

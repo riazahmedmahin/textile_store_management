@@ -47,8 +47,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
           // Top bar
           Container(
             padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 12 : 24,
-                vertical: isMobile ? 10 : 16),
+                horizontal: isMobile ? 12 : 24, vertical: isMobile ? 10 : 16),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               border: Border(bottom: BorderSide(color: AppTheme.border)),
@@ -96,8 +95,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                       if (!isMobile)
                         const Text(
                           'Product Management',
-                          style:
-                              TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                          style: TextStyle(
+                              fontSize: 12, color: AppTheme.textMuted),
                         ),
                     ],
                   ),

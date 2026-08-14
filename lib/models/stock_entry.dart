@@ -70,7 +70,7 @@ class StockEntry {
       productId: map['product_id'] as int,
       type: map['type'] as String,
       quantity: (map['quantity'] as num).toDouble(),
-      date: DateTime.parse(map['date'] as String),
+      date: DateTime.parse(map['date'] as String).toLocal(),
       billNo: map['bill_no'] as String,
       note: map['note'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String).toLocal(),

@@ -19,8 +19,7 @@ class SectionsListScreen extends StatelessWidget {
           // Top Bar
           Container(
             padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 16 : 24,
-                vertical: isMobile ? 12 : 16),
+                horizontal: isMobile ? 16 : 24, vertical: isMobile ? 12 : 16),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               border: Border(bottom: BorderSide(color: AppTheme.border)),
@@ -42,8 +41,8 @@ class SectionsListScreen extends StatelessWidget {
                       if (!isMobile)
                         const Text(
                           'Manage your store sections',
-                          style:
-                              TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                          style: TextStyle(
+                              fontSize: 13, color: AppTheme.textMuted),
                         ),
                     ],
                   ),
@@ -195,7 +194,10 @@ class _SectionCard extends StatelessWidget {
                       height: 46,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [section.color, section.color.withOpacity(0.7)],
+                          colors: [
+                            section.color,
+                            section.color.withOpacity(0.7)
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -225,7 +227,8 @@ class _SectionCard extends StatelessWidget {
                         const PopupMenuItem(
                           value: 'edit',
                           child: Row(children: [
-                            Icon(Icons.edit_outlined, color: AppTheme.primary, size: 16),
+                            Icon(Icons.edit_outlined,
+                                color: AppTheme.primary, size: 16),
                             SizedBox(width: 8),
                             Text('Edit', style: TextStyle(fontSize: 14)),
                           ]),
@@ -233,10 +236,12 @@ class _SectionCard extends StatelessWidget {
                         const PopupMenuItem(
                           value: 'delete',
                           child: Row(children: [
-                            Icon(Icons.delete_outline, color: AppTheme.danger, size: 16),
+                            Icon(Icons.delete_outline,
+                                color: AppTheme.danger, size: 16),
                             SizedBox(width: 8),
                             Text('Delete',
-                                style: TextStyle(color: AppTheme.danger, fontSize: 14)),
+                                style: TextStyle(
+                                    color: AppTheme.danger, fontSize: 14)),
                           ]),
                         ),
                       ],

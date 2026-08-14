@@ -29,11 +29,20 @@ class StockProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _sortEntries(List<StockEntry> list) {
+    list.sort((a, b) {
+      final cmp = b.date.compareTo(a.date);
+      if (cmp != 0) return cmp;
+      return b.createdAt.compareTo(a.createdAt);
+    });
+  }
+
   Future<void> addEntry(StockEntry entry, double initialStock) async {
     final id = await _db.insertStockEntry(entry);
     final newEntry = entry.copyWith(id: id);
-    _entriesByProduct[entry.productId] ??= [];
-    _entriesByProduct[entry.productId]!.insert(0, newEntry);
+    final list = _entriesByProduct[entry.productId] ??= [];
+    list.add(newEntry);
+    _sortEntries(list);
     _currentStock[entry.productId] =
         await _db.getCurrentStock(entry.productId, initialStock);
     notifyListeners();
@@ -54,7 +63,10 @@ class StockProvider extends ChangeNotifier {
     final list = _entriesByProduct[entry.productId];
     if (list != null) {
       final idx = list.indexWhere((e) => e.id == entry.id);
-      if (idx != -1) list[idx] = entry;
+      if (idx != -1) {
+        list[idx] = entry;
+        _sortEntries(list);
+      }
     }
     _currentStock[entry.productId] =
         await _db.getCurrentStock(entry.productId, initialStock);
