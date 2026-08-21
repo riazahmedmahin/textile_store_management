@@ -23,6 +23,7 @@ class _MainShellState extends State<MainShell>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   AppView _currentView = AppView.admin;
+  bool _isCollapsed = false;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
@@ -220,15 +221,6 @@ class _MainShellState extends State<MainShell>
     final auth = context.watch<AuthProvider>();
     final showViewSwitcher = auth.role == 'admin';
 
-    final sidebarWidget = _Sidebar(
-      currentIndex: _currentIndex,
-      currentView: _currentView,
-      navItems: _navItems,
-      showViewSwitcher: showViewSwitcher,
-      onIndexChanged: _changeIndex,
-      onViewChanged: _changeView,
-    );
-
     if (isMobile) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
@@ -301,7 +293,16 @@ class _MainShellState extends State<MainShell>
         drawer: Drawer(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          child: sidebarWidget,
+          child: _Sidebar(
+            currentIndex: _currentIndex,
+            currentView: _currentView,
+            navItems: _navItems,
+            showViewSwitcher: showViewSwitcher,
+            isCollapsed: false,
+            onToggleCollapse: null,
+            onIndexChanged: _changeIndex,
+            onViewChanged: _changeView,
+          ),
         ),
         body: _buildIndexedStack(),
         bottomNavigationBar: _navItems.length > 1
@@ -347,7 +348,32 @@ class _MainShellState extends State<MainShell>
       backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
         children: [
-          sidebarWidget,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOutCubic,
+            width: _isCollapsed ? 74.0 : 250.0,
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.topLeft,
+                minWidth: 0,
+                maxWidth: 250,
+                child: SizedBox(
+                  width: _isCollapsed ? 74.0 : 250.0,
+                  child: _Sidebar(
+                    currentIndex: _currentIndex,
+                    currentView: _currentView,
+                    navItems: _navItems,
+                    showViewSwitcher: showViewSwitcher,
+                    isCollapsed: _isCollapsed,
+                    onToggleCollapse: () =>
+                        setState(() => _isCollapsed = !_isCollapsed),
+                    onIndexChanged: _changeIndex,
+                    onViewChanged: _changeView,
+                  ),
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: _buildIndexedStack(),
           ),
@@ -364,6 +390,8 @@ class _Sidebar extends StatelessWidget {
   final AppView currentView;
   final List<_NavItem> navItems;
   final bool showViewSwitcher;
+  final bool isCollapsed;
+  final VoidCallback? onToggleCollapse;
   final ValueChanged<int> onIndexChanged;
   final ValueChanged<AppView> onViewChanged;
 
@@ -372,6 +400,8 @@ class _Sidebar extends StatelessWidget {
     required this.currentView,
     required this.navItems,
     required this.showViewSwitcher,
+    this.isCollapsed = false,
+    this.onToggleCollapse,
     required this.onIndexChanged,
     required this.onViewChanged,
   });
@@ -381,7 +411,8 @@ class _Sidebar extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
 
     return Container(
-      width: 250,
+      width: isCollapsed ? 74.0 : 250.0,
+      clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF1A1744), Color(0xFF1E1B4B)],
@@ -392,72 +423,173 @@ class _Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Logo Header ──────────────────────────────────────────────
+          // ── Logo / App Header ──────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
+            padding: EdgeInsets.fromLTRB(
+              isCollapsed ? 12 : 20,
+              28,
+              isCollapsed ? 12 : 16,
+              16,
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: isCollapsed
+                      ? MainAxisAlignment.center
+                      : MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF4F46E5).withAlpha(120),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
+                    if (isCollapsed) ...[
+                      Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF4F46E5).withAlpha(120),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
+                          if (onToggleCollapse != null) ...[
+                            const SizedBox(height: 10),
+                            Tooltip(
+                              message: 'Expand Sidebar',
+                              child: InkWell(
+                                onTap: onToggleCollapse,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        const Color(0xFF312E81).withAlpha(120),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 36,
-                          height: 36,
-                          fit: BoxFit.contain,
+                    ] else ...[
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        const Color(0xFF4F46E5).withAlpha(120),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  width: 34,
+                                  height: 34,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Lucky Group',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  ShaderMask(
+                                    shaderCallback: (b) => const LinearGradient(
+                                      colors: [
+                                        Color(0xFF818CF8),
+                                        Color(0xFF6EE7B7)
+                                      ],
+                                    ).createShader(b),
+                                    child: const Text(
+                                      'Kattali Textile Limited',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Lucky Group',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        ShaderMask(
-                          shaderCallback: (b) => const LinearGradient(
-                            colors: [Color(0xFF818CF8), Color(0xFF6EE7B7)],
-                          ).createShader(b),
-                          child: const Text(
-                            'Kattali Textile Limited',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.2,
+                      if (onToggleCollapse != null)
+                        Tooltip(
+                          message: 'Collapse Sidebar',
+                          child: InkWell(
+                            onTap: onToggleCollapse,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF312E81).withAlpha(120),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.chevron_left_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 20),
-                // Thin accent divider
+                const SizedBox(height: 16),
                 Container(
                   height: 1,
                   decoration: const BoxDecoration(
@@ -470,76 +602,163 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
 
-          // ── View Switcher ────────────────────────────────────────────
+          // ── View Switcher (Admin / Store) ─────────────────────────────
           if (showViewSwitcher)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F0E30),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF312E81), width: 1),
-                ),
-                padding: const EdgeInsets.all(5),
-                child: Row(
-                  children: [
-                    _ViewTab(
-                      label: 'Admin',
-                      icon: Icons.shield_outlined,
-                      isSelected: currentView == AppView.admin,
-                      onTap: () {
-                        onViewChanged(AppView.admin);
-                        if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                    _ViewTab(
-                      label: 'Store',
-                      icon: Icons.storefront_outlined,
-                      isSelected: currentView == AppView.store,
-                      onTap: () {
-                        onViewChanged(AppView.store);
-                        if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                  ],
-                ),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCollapsed ? 12 : 16,
+                vertical: 4,
               ),
-            )
-          else
-            const SizedBox(height: 8),
-
-          // ── Section Label ────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 4,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF6366F1),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  currentView == AppView.admin ? 'ADMIN PANEL' : 'STORE PANEL',
-                  style: const TextStyle(
-                    color: Color(0xFF6366F1),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
+              child: isCollapsed
+                  ? Column(
+                      children: [
+                        Tooltip(
+                          message: 'Admin View',
+                          child: InkWell(
+                            onTap: () {
+                              onViewChanged(AppView.admin);
+                              if (Scaffold.maybeOf(context)?.isDrawerOpen ??
+                                  false) {
+                                Navigator.pop(context);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              width: 46,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: currentView == AppView.admin
+                                    ? const Color(0xFF4F46E5)
+                                    : const Color(0xFF0F0E30),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: currentView == AppView.admin
+                                      ? const Color(0xFF818CF8)
+                                      : const Color(0xFF312E81),
+                                ),
+                              ),
+                              child: const Icon(Icons.shield_outlined,
+                                  color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Tooltip(
+                          message: 'Store View',
+                          child: InkWell(
+                            onTap: () {
+                              onViewChanged(AppView.store);
+                              if (Scaffold.maybeOf(context)?.isDrawerOpen ??
+                                  false) {
+                                Navigator.pop(context);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              width: 46,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: currentView == AppView.store
+                                    ? const Color(0xFF4F46E5)
+                                    : const Color(0xFF0F0E30),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: currentView == AppView.store
+                                      ? const Color(0xFF818CF8)
+                                      : const Color(0xFF312E81),
+                                ),
+                              ),
+                              child: const Icon(Icons.storefront_outlined,
+                                  color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F0E30),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: const Color(0xFF312E81), width: 1),
+                      ),
+                      padding: const EdgeInsets.all(5),
+                      child: Row(
+                        children: [
+                          _ViewTab(
+                            label: 'Admin',
+                            icon: Icons.shield_outlined,
+                            isSelected: currentView == AppView.admin,
+                            onTap: () {
+                              onViewChanged(AppView.admin);
+                              if (Scaffold.maybeOf(context)?.isDrawerOpen ??
+                                  false) {
+                                Navigator.pop(context);
+                              }
+                            },
+                          ),
+                          _ViewTab(
+                            label: 'Store',
+                            icon: Icons.storefront_outlined,
+                            isSelected: currentView == AppView.store,
+                            onTap: () {
+                              onViewChanged(AppView.store);
+                              if (Scaffold.maybeOf(context)?.isDrawerOpen ??
+                                  false) {
+                                Navigator.pop(context);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
             ),
+
+          // ── Section Label / Divider ──────────────────────────────────
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isCollapsed ? 16 : 20,
+              12,
+              isCollapsed ? 16 : 20,
+              8,
+            ),
+            child: isCollapsed
+                ? Container(
+                    height: 1,
+                    color: const Color(0xFF312E81).withAlpha(120),
+                  )
+                : Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF6366F1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          currentView == AppView.admin
+                              ? 'ADMIN PANEL'
+                              : 'STORE PANEL',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: const TextStyle(
+                            color: Color(0xFF6366F1),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
 
-          // ── Nav Items ────────────────────────────────────────────────
+          // ── Nav Items List ───────────────────────────────────────────
           ...navItems.asMap().entries.map((entry) {
             final idx = entry.key;
             final item = entry.value;
@@ -547,6 +766,7 @@ class _Sidebar extends StatelessWidget {
             return _NavTile(
               item: item,
               isActive: isActive,
+              isCollapsed: isCollapsed,
               onTap: () {
                 onIndexChanged(idx);
                 if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
@@ -558,125 +778,222 @@ class _Sidebar extends StatelessWidget {
 
           const Spacer(),
 
-          // ── User Info Card ───────────────────────────────────────────
+          // ── User Info & Profile Card ─────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F0E30),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF312E81), width: 1),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: auth.role == 'admin'
-                            ? [const Color(0xFF6366F1), const Color(0xFF4F46E5)]
-                            : [
-                                const Color(0xFF10B981),
-                                const Color(0xFF059669)
-                              ],
+            padding: EdgeInsets.symmetric(
+              horizontal: isCollapsed ? 12 : 14,
+              vertical: 6,
+            ),
+            child: isCollapsed
+                ? Column(
+                    children: [
+                      Tooltip(
+                        message:
+                            '${auth.role == 'admin' ? 'Admin' : 'Store'} (${auth.email ?? ''})',
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: auth.role == 'admin'
+                                  ? [
+                                      const Color(0xFF6366F1),
+                                      const Color(0xFF4F46E5)
+                                    ]
+                                  : [
+                                      const Color(0xFF10B981),
+                                      const Color(0xFF059669)
+                                    ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF4F46E5).withAlpha(80),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.person_rounded,
+                              color: Colors.white, size: 22),
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.person_rounded,
-                        color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          auth.role == 'admin' ? 'Admin User' : 'Store User',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
+                      const SizedBox(height: 10),
+                      Tooltip(
+                        message: 'Logout',
+                        child: InkWell(
+                          onTap: () {
+                            if (Scaffold.maybeOf(context)?.isDrawerOpen ??
+                                false) {
+                              Navigator.pop(context);
+                            }
+                            auth.logout();
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: 44,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withAlpha(25),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.logout_rounded,
+                                color: Color(0xFFEF4444), size: 18),
                           ),
                         ),
-                        Text(
-                          auth.email ?? '',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Color(0xFF818CF8), fontSize: 10),
+                      ),
+                    ],
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F0E30),
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: const Color(0xFF312E81), width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: auth.role == 'admin'
+                                  ? [
+                                      const Color(0xFF6366F1),
+                                      const Color(0xFF4F46E5)
+                                    ]
+                                  : [
+                                      const Color(0xFF10B981),
+                                      const Color(0xFF059669)
+                                    ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.person_rounded,
+                              color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                auth.role == 'admin'
+                                    ? 'Admin User'
+                                    : 'Store User',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                auth.email ?? '',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: const TextStyle(
+                                    color: Color(0xFF818CF8), fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            if (Scaffold.maybeOf(context)?.isDrawerOpen ??
+                                false) {
+                              Navigator.pop(context);
+                            }
+                            auth.logout();
+                          },
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withAlpha(25),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.logout_rounded,
+                                color: Color(0xFFEF4444), size: 16),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
-                        Navigator.pop(context);
-                      }
-                      auth.logout();
-                    },
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withAlpha(25),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.logout_rounded,
-                          color: Color(0xFFEF4444), size: 16),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
 
           // ── Developed by Footer ──────────────────────────────────────
           Container(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF818CF8), Color(0xFF4F46E5)],
-                    ),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Icon(Icons.code_rounded,
-                      color: Colors.white, size: 10),
-                ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Developed by ',
-                  style: TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                ShaderMask(
-                  shaderCallback: (b) => const LinearGradient(
-                    colors: [Color(0xFF818CF8), Color(0xFF6EE7B7)],
-                  ).createShader(b),
-                  child: const Text(
-                    'Riaz Ahmed',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ],
+            padding: EdgeInsets.fromLTRB(
+              isCollapsed ? 12 : 14,
+              6,
+              isCollapsed ? 12 : 14,
+              20,
             ),
+            child: isCollapsed
+                ? Center(
+                    child: Tooltip(
+                      message: 'Developed by Riaz Ahmed',
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF818CF8), Color(0xFF4F46E5)],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.code_rounded,
+                            color: Colors.white, size: 14),
+                      ),
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF818CF8), Color(0xFF4F46E5)],
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(Icons.code_rounded,
+                            color: Colors.white, size: 10),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Developed by ',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      ShaderMask(
+                        shaderCallback: (b) => const LinearGradient(
+                          colors: [Color(0xFF818CF8), Color(0xFF6EE7B7)],
+                        ).createShader(b),
+                        child: const Text(
+                          'Riaz Ahmed',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -756,10 +1073,15 @@ class _ViewTab extends StatelessWidget {
 class _NavTile extends StatefulWidget {
   final _NavItem item;
   final bool isActive;
+  final bool isCollapsed;
   final VoidCallback onTap;
 
-  const _NavTile(
-      {required this.item, required this.isActive, required this.onTap});
+  const _NavTile({
+    required this.item,
+    required this.isActive,
+    this.isCollapsed = false,
+    required this.onTap,
+  });
 
   @override
   State<_NavTile> createState() => _NavTileState();
@@ -770,6 +1092,58 @@ class _NavTileState extends State<_NavTile> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isCollapsed) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Tooltip(
+          message: widget.item.label,
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() => _hovered = false),
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                height: 44,
+                width: 48,
+                decoration: BoxDecoration(
+                  color: widget.isActive
+                      ? widget.item.color.withAlpha(50)
+                      : _hovered
+                          ? const Color(0xFF312E81).withAlpha(90)
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: widget.isActive
+                      ? Border.all(
+                          color: widget.item.color.withAlpha(120), width: 1.5)
+                      : null,
+                  boxShadow: widget.isActive
+                      ? [
+                          BoxShadow(
+                            color: widget.item.color.withAlpha(60),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: Icon(
+                    widget.isActive ? widget.item.activeIcon : widget.item.icon,
+                    size: 20,
+                    color: widget.isActive
+                        ? widget.item.color
+                        : const Color(0xFF9CA3AF),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: MouseRegion(
@@ -827,6 +1201,7 @@ class _NavTileState extends State<_NavTile> {
                 Expanded(
                   child: Text(
                     widget.item.label,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: widget.isActive
                           ? Colors.white
