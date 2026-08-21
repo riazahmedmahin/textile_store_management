@@ -22,6 +22,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
   final List<String> _units = [
     'pcs',
     'meter',
+    'feet',
+    'fit',
     'kg',
     'roll',
     'box',
