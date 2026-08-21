@@ -564,7 +564,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
               // Bar chart
               SizedBox(
-                height: isMobile ? 130 : 200,
+                height: isMobile ? 140 : 215,
                 child: totalIn == 0 && totalOut == 0
                     ? Center(
                         child: Column(
@@ -775,16 +775,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         }
 
+        // Distinct vibrant color palette for clean visual differentiation
+        final List<Color> chartPalette = [
+          const Color(0xFF10B981), // Emerald Green
+          const Color(0xFFEF4444), // Coral Red
+          const Color(0xFF3B82F6), // Electric Blue
+          const Color(0xFF8B5CF6), // Purple
+          const Color(0xFFF59E0B), // Amber
+          const Color(0xFF06B6D4), // Cyan
+          const Color(0xFFEC4899), // Pink
+          const Color(0xFF6366F1), // Indigo
+          const Color(0xFF14B8A6), // Mint Teal
+          const Color(0xFFF97316), // Deep Orange
+        ];
+
         // Build pie data
         final List<_PieData> pieData = [];
+        int colorIdx = 0;
         for (final sec in sections) {
           final stats = sectionStats[sec.id] ?? {};
           final totalStock = (stats['total_stock'] as double?) ?? 0.0;
           if (totalStock > 0) {
+            final distinctColor = chartPalette[colorIdx % chartPalette.length];
+            colorIdx++;
             pieData.add(_PieData(
               name: sec.name,
               value: totalStock,
-              color: sec.color,
+              color: distinctColor,
             ));
           }
         }
@@ -841,70 +858,149 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     )
                   : Column(
                       children: [
-                        SizedBox(
-                          height: isMobile ? 130 : 180,
-                          child: PieChart(
-                            PieChartData(
-                              sectionsSpace: 2,
-                              centerSpaceRadius: isMobile ? 25 : 40,
-                              sections: pieData.map((d) {
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              height: isMobile ? 160 : 200,
+                              child: PieChart(
+                                PieChartData(
+                                  sectionsSpace: 3,
+                                  centerSpaceRadius: isMobile ? 42 : 55,
+                                  sections: pieData.map((d) {
+                                    final pct = grandTotal > 0
+                                        ? (d.value / grandTotal * 100)
+                                        : 0.0;
+                                    final showTitle = pct >= 6;
+                                    return PieChartSectionData(
+                                      value: d.value,
+                                      color: d.color,
+                                      radius: isMobile ? 28 : 38,
+                                      title: showTitle
+                                          ? '${pct.toStringAsFixed(0)}%'
+                                          : '',
+                                      titleStyle: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: isMobile ? 10 : 12,
+                                        shadows: const [
+                                          Shadow(
+                                              blurRadius: 3,
+                                              color: Colors.black26)
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  grandTotal.toStringAsFixed(0),
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 18 : 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.textPrimary,
+                                    height: 1.1,
+                                  ),
+                                ),
+                                Text(
+                                  'Total Stock',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 9 : 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: isMobile ? 12 : 18),
+                        // Legend Grid (2 columns on desktop for compactness)
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final halfWidth = (constraints.maxWidth - 8) / 2;
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: pieData.map((d) {
                                 final pct = grandTotal > 0
                                     ? (d.value / grandTotal * 100)
                                     : 0.0;
-                                return PieChartSectionData(
-                                  value: d.value,
-                                  color: d.color,
-                                  radius: isMobile ? 25 : 40,
-                                  title: '${pct.toStringAsFixed(0)}%',
-                                  titleStyle: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: isMobile ? 9 : 11,
+                                return SizedBox(
+                                  width: isMobile ? constraints.maxWidth : halfWidth,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: isMobile ? 8 : 10,
+                                        vertical: isMobile ? 6 : 7),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.bgSurface,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: AppTheme.border.withOpacity(0.6)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            color: d.color,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            d.name,
+                                            style: TextStyle(
+                                              fontSize: isMobile ? 10 : 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textPrimary,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: d.color.withOpacity(0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '${pct.toStringAsFixed(0)}%',
+                                            style: TextStyle(
+                                              fontSize: isMobile ? 9 : 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: d.color,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          isMobile
+                                              ? '${d.value.toStringAsFixed(0)}u'
+                                              : '${d.value.toStringAsFixed(0)} units',
+                                          style: TextStyle(
+                                            fontSize: isMobile ? 10 : 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               }).toList(),
-                            ),
-                          ),
+                            );
+                          },
                         ),
-                        SizedBox(height: isMobile ? 10 : 16),
-                        // Legend
-                        ...pieData.map((d) => Padding(
-                              padding:
-                                  EdgeInsets.only(bottom: isMobile ? 4 : 6),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: isMobile ? 8 : 10,
-                                    height: isMobile ? 8 : 10,
-                                    decoration: BoxDecoration(
-                                      color: d.color,
-                                      borderRadius: BorderRadius.circular(
-                                          isMobile ? 2 : 3),
-                                    ),
-                                  ),
-                                  SizedBox(width: isMobile ? 6 : 8),
-                                  Expanded(
-                                    child: Text(
-                                      d.name,
-                                      style: TextStyle(
-                                          fontSize: isMobile ? 10 : 12,
-                                          color: AppTheme.textSecondary,
-                                          overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ),
-                                  Text(
-                                    isMobile
-                                        ? '${d.value.toStringAsFixed(0)} u'
-                                        : '${d.value.toStringAsFixed(0)} units',
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 10 : 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )),
                       ],
                     ),
             ],
