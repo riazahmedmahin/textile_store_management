@@ -19,14 +19,36 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   bool _isDataLoading = false;
   bool _showAllLowStock = false;
   final ScrollController _sectionScrollController = ScrollController();
+  late AnimationController _entranceController;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
 
   @override
   void initState() {
     super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    _fadeAnim = CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOutCubic,
+    );
+
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOutCubic,
+    ));
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshData(forceSpinner: false);
     });
@@ -34,6 +56,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    _entranceController.dispose();
     _sectionScrollController.dispose();
     super.dispose();
   }
@@ -44,10 +67,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final sectionProvider = context.read<SectionProvider>();
     final productProvider = context.read<ProductProvider>();
 
-    // Only show full-screen spinner if we have no stats cached at all
     if (stockProvider.dashboardStats.isEmpty || forceSpinner) {
       setState(() => _isDataLoading = true);
     }
+
+    _entranceController.reset();
 
     await Future.wait([
       stockProvider.loadDashboardStats(forceLoading: forceSpinner),
@@ -57,6 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (mounted) {
       setState(() => _isDataLoading = false);
+      _entranceController.forward();
     }
   }
 
@@ -91,60 +116,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _buildTopBar(),
           Expanded(
             child: _isDataLoading
-                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                : SingleChildScrollView(
-                    padding: EdgeInsets.all(isMobile ? 16 : 24),
+                ? const Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildStatsRow(),
-                        const SizedBox(height: 24),
-                        // Charts row
-                        if (isMobile) ...[
-                          _buildStockFlowChart(),
-                          const SizedBox(height: 16),
-                          _buildSectionPieChart(),
-                          const SizedBox(height: 20),
-                          _buildSectionSummary(),
-                          if (hasLowStock) ...[
-                            const SizedBox(height: 20),
-                            _buildLowStockAlert(),
-                          ],
-                          const SizedBox(height: 20),
-                          _buildRecentActivity(),
-                        ] else ...[
-                          // Row 1: Stock Flow + Stock by Section
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 3, child: _buildStockFlowChart()),
-                              const SizedBox(width: 20),
-                              Expanded(flex: 2, child: _buildSectionPieChart()),
-                            ],
+                        CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Loading Dashboard Data...',
+                          style: TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(height: 24),
-                          // Row 2: Store Stock - Section Wise (Full Width)
-                          _buildSectionSummary(),
-                          const SizedBox(height: 24),
-                          // Row 3: Recent Activity (Stock History) + Low Stock Alert
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: hasLowStock ? 3 : 1,
-                                child: _buildRecentActivity(),
-                              ),
-                              if (hasLowStock) ...[
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  flex: 2,
-                                  child: _buildLowStockAlert(),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
+                        ),
                       ],
+                    ),
+                  )
+                : FadeTransition(
+                    opacity: _fadeAnim,
+                    child: SlideTransition(
+                      position: _slideAnim,
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.all(isMobile ? 16 : 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildStatsRow(),
+                            const SizedBox(height: 24),
+                            // Charts row
+                            if (isMobile) ...[
+                              _buildStockFlowChart(),
+                              const SizedBox(height: 16),
+                              _buildSectionPieChart(),
+                              const SizedBox(height: 20),
+                              _buildSectionSummary(),
+                              if (hasLowStock) ...[
+                                const SizedBox(height: 20),
+                                _buildLowStockAlert(),
+                              ],
+                              const SizedBox(height: 20),
+                              _buildRecentActivity(),
+                            ] else ...[
+                              // Row 1: Stock Flow + Stock by Section
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                      flex: 3, child: _buildStockFlowChart()),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                      flex: 2, child: _buildSectionPieChart()),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              // Row 2: Store Stock - Section Wise (Full Width)
+                              _buildSectionSummary(),
+                              const SizedBox(height: 24),
+                              // Row 3: Recent Activity (Stock History) + Low Stock Alert
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: hasLowStock ? 3 : 1,
+                                    child: _buildRecentActivity(),
+                                  ),
+                                  if (hasLowStock) ...[
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      flex: 2,
+                                      child: _buildLowStockAlert(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
           ),
@@ -168,14 +221,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Dashboard',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    const Text(
+                      'Dashboard',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withAlpha(20),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.bolt_rounded,
+                              size: 12, color: AppTheme.primary),
+                          SizedBox(width: 3),
+                          Text(
+                            'Live',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 2),
                 Text(
                   DateFormat(isMobile ? 'dd MMM yyyy' : 'EEEE, dd MMMM yyyy')
                       .format(DateTime.now()),
@@ -187,23 +270,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          isMobile
-              ? IconButton(
-                  onPressed: () => _refreshData(forceSpinner: true),
-                  icon: const Icon(Icons.refresh_rounded,
-                      color: AppTheme.primary, size: 20),
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.primary.withOpacity(0.08),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.all(8),
-                  ),
-                )
-              : OutlinedButton.icon(
-                  onPressed: () => _refreshData(forceSpinner: true),
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Refresh'),
-                ),
+          _AnimatedRefreshButton(
+            onPressed: () => _refreshData(forceSpinner: true),
+            isMobile: isMobile,
+          ),
         ],
       ),
     );
@@ -220,7 +290,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         final double width = MediaQuery.of(context).size.width;
         int crossAxisCount = 5;
-        double childAspectRatio = 1.6;
+        double childAspectRatio = 1.55;
         if (width < 600) {
           crossAxisCount = 2;
           childAspectRatio = 1.35;
@@ -248,6 +318,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.inventory_2_outlined,
               iconColor: AppTheme.primary,
               bgColor: const Color(0xFFEEF2FF),
+              accentGradient: const LinearGradient(
+                colors: [Color(0xFF818CF8), Color(0xFF4F46E5)],
+              ),
             ),
             _StatCard(
               label: 'Total In',
@@ -255,6 +328,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.arrow_downward_rounded,
               iconColor: AppTheme.success,
               bgColor: const Color(0xFFECFDF5),
+              accentGradient: const LinearGradient(
+                colors: [Color(0xFF34D399), Color(0xFF10B981)],
+              ),
             ),
             _StatCard(
               label: 'Total Out',
@@ -262,6 +338,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.arrow_upward_rounded,
               iconColor: AppTheme.danger,
               bgColor: const Color(0xFFFFF1F2),
+              accentGradient: const LinearGradient(
+                colors: [Color(0xFFF87171), Color(0xFFEF4444)],
+              ),
             ),
             _StatCard(
               label: 'Low Stock Items',
@@ -269,6 +348,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.warning_amber_rounded,
               iconColor: AppTheme.warning,
               bgColor: const Color(0xFFFFF7ED),
+              accentGradient: const LinearGradient(
+                colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+              ),
             ),
             _StatCard(
               label: 'Out of Stock Items',
@@ -276,6 +358,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.error_outline_rounded,
               iconColor: AppTheme.danger,
               bgColor: const Color(0xFFFEF2F2),
+              accentGradient: const LinearGradient(
+                colors: [Color(0xFFFB7185), Color(0xFFE11D48)],
+              ),
             ),
           ],
         );
@@ -316,38 +401,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.warning_amber_rounded,
-                        color: AppTheme.danger, size: 18),
-                  ),
+                  const _PulsingWarningIcon(),
                   const SizedBox(width: 10),
                   const Text(
                     'Low Stock Alerts',
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: AppTheme.danger,
                     ),
                   ),
                   const Spacer(),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTheme.danger.withOpacity(0.1),
+                      color: AppTheme.danger.withAlpha(30),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${lowStockItems.length}',
                       style: const TextStyle(
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         color: AppTheme.danger,
                       ),
                     ),
@@ -356,71 +432,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 12),
               AnimatedSize(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeInOutCubic,
                 child: Column(
                   children: [
                     ...displayItems.map((item) {
                       final product = item['product'] as Product;
                       final section = item['section'] as AppSection;
                       final stock = item['stock'] as double;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.danger.withOpacity(0.02),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: AppTheme.danger.withOpacity(0.08)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    product.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    section.name,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: AppTheme.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.danger.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
-                                style: const TextStyle(
-                                  color: AppTheme.danger,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      return _AnimatedAlertRow(
+                        product: product,
+                        section: section,
+                        stock: stock,
                       );
                     }).toList(),
                     if (hasMore) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       InkWell(
                         onTap: () {
                           setState(() {
@@ -434,9 +461,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             border: Border.all(
-                                color: AppTheme.danger.withOpacity(0.2)),
+                                color: AppTheme.danger.withAlpha(50)),
                             borderRadius: BorderRadius.circular(8),
-                            color: AppTheme.danger.withOpacity(0.02),
+                            color: AppTheme.danger.withAlpha(10),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -486,22 +513,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final totalOut = (stats['total_out'] as num?)?.toDouble() ?? 0;
         final netStock = totalIn - totalOut;
 
-        // Build per-section in/out data
-        final recentEntries =
-            (stats['recent_entries'] as List<StockEntry>?) ?? [];
-
-        // Group recent entries by section
-        final Map<String, double> sectionIn = {};
-        final Map<String, double> sectionOut = {};
-        for (final entry in recentEntries) {
-          final secName = entry.sectionName ?? 'Other';
-          if (entry.type == 'in') {
-            sectionIn[secName] = (sectionIn[secName] ?? 0) + entry.quantity;
-          } else {
-            sectionOut[secName] = (sectionOut[secName] ?? 0) + entry.quantity;
-          }
-        }
-
         return _CardContainer(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,7 +523,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.1),
+                      color: AppTheme.primary.withAlpha(20),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.bar_chart_rounded,
@@ -524,7 +535,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       'Stock Flow Overview',
                       style: TextStyle(
                         fontSize: isMobile ? 13 : 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -571,7 +582,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.bar_chart_rounded,
-                                color: AppTheme.textMuted.withOpacity(0.4),
+                                color: AppTheme.textMuted.withAlpha(90),
                                 size: 40),
                             const SizedBox(height: 8),
                             const Text('No stock data yet',
@@ -645,7 +656,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ((totalIn > totalOut ? totalIn : totalOut) / 4)
                                     .clamp(1, double.infinity),
                             getDrawingHorizontalLine: (value) => FlLine(
-                              color: AppTheme.border.withOpacity(0.5),
+                              color: AppTheme.border.withAlpha(120),
                               strokeWidth: 1,
                               dashArray: [4, 4],
                             ),
@@ -667,7 +678,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             ? totalIn
                                             : totalOut) *
                                         1.3,
-                                    color: AppTheme.success.withOpacity(0.05),
+                                    color: AppTheme.success.withAlpha(12),
                                   ),
                                 ),
                                 BarChartRodData(
@@ -682,13 +693,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             ? totalIn
                                             : totalOut) *
                                         1.3,
-                                    color: AppTheme.danger.withOpacity(0.05),
+                                    color: AppTheme.danger.withAlpha(12),
                                   ),
                                 ),
                               ],
                             ),
                           ],
                         ),
+                        swapAnimationDuration:
+                            const Duration(milliseconds: 600),
+                        swapAnimationCurve: Curves.easeOutCubic,
                       ),
               ),
               const SizedBox(height: 12),
@@ -736,7 +750,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: AppTheme.accent.withOpacity(0.1),
+                        color: AppTheme.accent.withAlpha(20),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.pie_chart_rounded,
@@ -748,7 +762,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'Stock by Section',
                         style: TextStyle(
                           fontSize: isMobile ? 13 : 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -761,7 +775,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     children: [
                       Icon(Icons.pie_chart_outline_rounded,
-                          color: AppTheme.textMuted.withOpacity(0.4), size: 40),
+                          color: AppTheme.textMuted.withAlpha(90), size: 40),
                       const SizedBox(height: 8),
                       const Text('No sections yet',
                           style: TextStyle(
@@ -775,21 +789,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         }
 
-        // Distinct vibrant color palette for clean visual differentiation
         final List<Color> chartPalette = [
-          const Color(0xFF10B981), // Emerald Green
-          const Color(0xFFEF4444), // Coral Red
-          const Color(0xFF3B82F6), // Electric Blue
-          const Color(0xFF8B5CF6), // Purple
-          const Color(0xFFF59E0B), // Amber
-          const Color(0xFF06B6D4), // Cyan
-          const Color(0xFFEC4899), // Pink
-          const Color(0xFF6366F1), // Indigo
-          const Color(0xFF14B8A6), // Mint Teal
-          const Color(0xFFF97316), // Deep Orange
+          const Color(0xFF10B981),
+          const Color(0xFFEF4444),
+          const Color(0xFF3B82F6),
+          const Color(0xFF8B5CF6),
+          const Color(0xFFF59E0B),
+          const Color(0xFF06B6D4),
+          const Color(0xFFEC4899),
+          const Color(0xFF6366F1),
+          const Color(0xFF14B8A6),
+          const Color(0xFFF97316),
         ];
 
-        // Build pie data
         final List<_PieData> pieData = [];
         int colorIdx = 0;
         for (final sec in sections) {
@@ -818,7 +830,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: AppTheme.accent.withOpacity(0.1),
+                      color: AppTheme.accent.withAlpha(20),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.pie_chart_rounded,
@@ -830,7 +842,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       'Stock by Section',
                       style: TextStyle(
                         fontSize: isMobile ? 13 : 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -846,7 +858,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           children: [
                             Icon(Icons.pie_chart_outline_rounded,
-                                color: AppTheme.textMuted.withOpacity(0.4),
+                                color: AppTheme.textMuted.withAlpha(90),
                                 size: 40),
                             const SizedBox(height: 8),
                             const Text('No stock data',
@@ -856,152 +868,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     )
-                  : Column(
-                      children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            SizedBox(
-                              height: isMobile ? 160 : 200,
-                              child: PieChart(
-                                PieChartData(
-                                  sectionsSpace: 3,
-                                  centerSpaceRadius: isMobile ? 42 : 55,
-                                  sections: pieData.map((d) {
-                                    final pct = grandTotal > 0
-                                        ? (d.value / grandTotal * 100)
-                                        : 0.0;
-                                    final showTitle = pct >= 6;
-                                    return PieChartSectionData(
-                                      value: d.value,
-                                      color: d.color,
-                                      radius: isMobile ? 28 : 38,
-                                      title: showTitle
-                                          ? '${pct.toStringAsFixed(0)}%'
-                                          : '',
-                                      titleStyle: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: isMobile ? 10 : 12,
-                                        shadows: const [
-                                          Shadow(
-                                              blurRadius: 3,
-                                              color: Colors.black26)
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ),
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  grandTotal.toStringAsFixed(0),
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 18 : 22,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.textPrimary,
-                                    height: 1.1,
-                                  ),
-                                ),
-                                Text(
-                                  'Total Stock',
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 9 : 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: isMobile ? 12 : 18),
-                        // Legend Grid (2 columns on desktop for compactness)
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final halfWidth = (constraints.maxWidth - 8) / 2;
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: pieData.map((d) {
-                                final pct = grandTotal > 0
-                                    ? (d.value / grandTotal * 100)
-                                    : 0.0;
-                                return SizedBox(
-                                  width: isMobile ? constraints.maxWidth : halfWidth,
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: isMobile ? 8 : 10,
-                                        vertical: isMobile ? 6 : 7),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.bgSurface,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                          color: AppTheme.border.withOpacity(0.6)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: d.color,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            d.name,
-                                            style: TextStyle(
-                                              fontSize: isMobile ? 10 : 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppTheme.textPrimary,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 5, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: d.color.withOpacity(0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '${pct.toStringAsFixed(0)}%',
-                                            style: TextStyle(
-                                              fontSize: isMobile ? 9 : 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: d.color,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          isMobile
-                                              ? '${d.value.toStringAsFixed(0)}u'
-                                              : '${d.value.toStringAsFixed(0)} units',
-                                          style: TextStyle(
-                                            fontSize: isMobile ? 10 : 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppTheme.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            );
-                          },
-                        ),
-                      ],
+                  : _InteractiveSectionPieChart(
+                      pieData: pieData,
+                      grandTotal: grandTotal,
+                      isMobile: isMobile,
                     ),
             ],
           ),
@@ -1027,7 +897,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: AppTheme.warning.withOpacity(0.1),
+                      color: AppTheme.warning.withAlpha(20),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.receipt_long_rounded,
@@ -1039,7 +909,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       'Recent Transactions History',
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -1079,7 +949,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: AppTheme.secondary.withOpacity(0.1),
+                      color: AppTheme.secondary.withAlpha(20),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.category_rounded,
@@ -1090,7 +960,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     'Store Stock — Section Wise',
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
                     ),
                   ),
@@ -1140,7 +1010,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               final products = prodProvider
                                   .getProductsForSection(section.id!);
 
-                              return GestureDetector(
+                              return _AnimatedSectionCard(
+                                section: section,
+                                productCount: productCount,
+                                totalStock: totalStock,
+                                isLowStock: isLowStock,
+                                products: products,
+                                stockProvider: stockProvider,
+                                isMobile: isMobile,
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -1150,194 +1027,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ).then((_) => _refreshData());
                                 },
-                                child: Container(
-                                  margin: isMobile
-                                      ? const EdgeInsets.only(bottom: 12)
-                                      : EdgeInsets.zero,
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: section.color.withOpacity(0.04),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: section.color.withOpacity(0.2)),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Header
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 34,
-                                            height: 34,
-                                            decoration: BoxDecoration(
-                                              color: section.color
-                                                  .withOpacity(0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(9),
-                                            ),
-                                            child: Icon(
-                                              _iconFromString(section.icon),
-                                              color: section.color,
-                                              size: 16,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  section.name,
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: AppTheme.textPrimary,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '$productCount ${productCount == 1 ? 'product' : 'products'}',
-                                                  style: const TextStyle(
-                                                    color: AppTheme.textMuted,
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                '${totalStock.toStringAsFixed(totalStock % 1 == 0 ? 0 : 1)}',
-                                                style: TextStyle(
-                                                  color: isLowStock
-                                                      ? AppTheme.danger
-                                                      : AppTheme.success,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                              Text(
-                                                'units',
-                                                style: TextStyle(
-                                                  fontSize: 9,
-                                                  color: isLowStock
-                                                      ? AppTheme.danger
-                                                      : AppTheme.textMuted,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Icon(
-                                            Icons.chevron_right_rounded,
-                                            size: 18,
-                                            color:
-                                                section.color.withOpacity(0.5),
-                                          ),
-                                        ],
-                                      ),
-                                      // Product list preview (max 3)
-                                      if (products.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        Divider(
-                                            height: 1,
-                                            color: section.color
-                                                .withOpacity(0.12)),
-                                        const SizedBox(height: 6),
-                                        ...products.take(3).map((product) {
-                                          final stock = stockProvider
-                                              .getCurrentStock(product.id!);
-                                          final isLow = stock < 10;
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 3),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  width: 5,
-                                                  height: 5,
-                                                  decoration: BoxDecoration(
-                                                    color: isLow
-                                                        ? AppTheme.danger
-                                                        : section.color
-                                                            .withOpacity(0.6),
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    product.name,
-                                                    style: const TextStyle(
-                                                      fontSize: 11,
-                                                      color: AppTheme
-                                                          .textSecondary,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: isLow
-                                                        ? AppTheme.danger
-                                                        : AppTheme.textPrimary,
-                                                  ),
-                                                ),
-                                                if (isLow) ...[
-                                                  const SizedBox(width: 4),
-                                                  Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 4,
-                                                        vertical: 1),
-                                                    decoration: BoxDecoration(
-                                                      color: AppTheme.danger
-                                                          .withOpacity(0.08),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              3),
-                                                    ),
-                                                    child: const Text(
-                                                      'LOW',
-                                                      style: TextStyle(
-                                                        color: AppTheme.danger,
-                                                        fontSize: 7,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          );
-                                        }),
-                                        if (products.length > 3)
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 4),
-                                            child: Text(
-                                              '+ ${products.length - 3} more',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                color: section.color,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
                               );
                             }).toList();
 
@@ -1385,12 +1074,604 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(icon, color: AppTheme.textMuted.withOpacity(0.4), size: 36),
+            Icon(icon, color: AppTheme.textMuted.withAlpha(90), size: 36),
             const SizedBox(height: 8),
             Text(text,
                 style:
                     const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Interactive Animated Section Pie Chart ──────────────────────────────────
+class _InteractiveSectionPieChart extends StatefulWidget {
+  final List<_PieData> pieData;
+  final double grandTotal;
+  final bool isMobile;
+
+  const _InteractiveSectionPieChart({
+    required this.pieData,
+    required this.grandTotal,
+    required this.isMobile,
+  });
+
+  @override
+  State<_InteractiveSectionPieChart> createState() =>
+      _InteractiveSectionPieChartState();
+}
+
+class _InteractiveSectionPieChartState
+    extends State<_InteractiveSectionPieChart> {
+  int _touchedIndex = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasTouch =
+        _touchedIndex >= 0 && _touchedIndex < widget.pieData.length;
+    final activeData = hasTouch ? widget.pieData[_touchedIndex] : null;
+
+    // Precompute center values to avoid layout shifts from AnimatedSwitcher
+    final centerValue = hasTouch
+        ? activeData!.value.toStringAsFixed(0)
+        : widget.grandTotal.toStringAsFixed(0);
+    final centerLabel = hasTouch ? activeData!.name : 'Total Stock';
+    final centerColor = hasTouch ? activeData!.color : AppTheme.textPrimary;
+    final centerLabelColor = hasTouch ? activeData!.color : AppTheme.textMuted;
+
+    // Fixed chart height - pie slice expansion doesn't shift the donut center
+    final chartHeight = widget.isMobile ? 200.0 : 240.0;
+    // centerSpaceRadius stays fixed - only slice radius changes
+    final centerSpaceRadius = widget.isMobile ? 48.0 : 60.0;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: chartHeight,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  pieTouchData: PieTouchData(
+                    touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          _touchedIndex = -1;
+                          return;
+                        }
+                        _touchedIndex = pieTouchResponse
+                            .touchedSection!.touchedSectionIndex;
+                      });
+                    },
+                  ),
+                  sectionsSpace: 3,
+                  centerSpaceRadius: centerSpaceRadius,
+                  sections: widget.pieData.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final d = entry.value;
+                    final isTouched = i == _touchedIndex;
+                    final pct = widget.grandTotal > 0
+                        ? (d.value / widget.grandTotal * 100)
+                        : 0.0;
+                    final showTitle = pct >= 5;
+
+                    return PieChartSectionData(
+                      value: d.value,
+                      color: d.color,
+                      // Small pop-out, no layout jitter
+                      radius: isTouched
+                          ? (widget.isMobile ? 38.0 : 50.0)
+                          : (widget.isMobile ? 30.0 : 40.0),
+                      title: showTitle ? '${pct.toStringAsFixed(0)}%' : '',
+                      titleStyle: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: widget.isMobile ? 10 : 12,
+                        shadows: const [
+                          Shadow(blurRadius: 4, color: Colors.black38)
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+                swapAnimationDuration: const Duration(milliseconds: 350),
+                swapAnimationCurve: Curves.easeOutCubic,
+              ),
+              // Fixed-size center donut display - never shifts layout
+              IgnorePointer(
+                child: SizedBox(
+                  width: centerSpaceRadius * 1.5,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        style: TextStyle(
+                          fontSize: widget.isMobile ? 18 : 22,
+                          fontWeight: FontWeight.w800,
+                          color: centerColor,
+                          height: 1.1,
+                        ),
+                        child: Text(
+                          centerValue,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        style: TextStyle(
+                          fontSize: widget.isMobile ? 9 : 11,
+                          fontWeight: FontWeight.w500,
+                          color: centerLabelColor,
+                        ),
+                        child: Text(
+                          centerLabel,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: widget.isMobile ? 10 : 14),
+        // Legend rows - only color/opacity animates, no size changes
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final halfWidth = (constraints.maxWidth - 8) / 2;
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: widget.pieData.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final d = entry.value;
+                final isSelected = idx == _touchedIndex;
+                final pct = widget.grandTotal > 0
+                    ? (d.value / widget.grandTotal * 100)
+                    : 0.0;
+
+                return SizedBox(
+                  width: widget.isMobile ? constraints.maxWidth : halfWidth,
+                  child: MouseRegion(
+                    onEnter: (_) => setState(() => _touchedIndex = idx),
+                    onExit: (_) => setState(() => _touchedIndex = -1),
+                    cursor: SystemMouseCursors.click,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      // Fixed padding - no layout shift
+                      padding: EdgeInsets.symmetric(
+                          horizontal: widget.isMobile ? 8 : 10,
+                          vertical: widget.isMobile ? 6 : 7),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? d.color.withAlpha(18)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        // Fixed border width - no layout shift
+                        border: Border.all(
+                          color: isSelected
+                              ? d.color.withAlpha(100)
+                              : AppTheme.border.withAlpha(100),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          // Fixed-size dot with color change only
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: d.color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              d.name,
+                              style: TextStyle(
+                                fontSize: widget.isMobile ? 10 : 11,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? AppTheme.textPrimary
+                                    : AppTheme.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: d.color.withAlpha(isSelected ? 40 : 20),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${pct.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                fontSize: widget.isMobile ? 9 : 10,
+                                fontWeight: FontWeight.w700,
+                                color: d.color,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            widget.isMobile
+                                ? '${d.value.toStringAsFixed(0)}u'
+                                : '${d.value.toStringAsFixed(0)} units',
+                            style: TextStyle(
+                              fontSize: widget.isMobile ? 10 : 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Pulsing Warning Icon Animation ──────────────────────────────────────────
+class _PulsingWarningIcon extends StatefulWidget {
+  const _PulsingWarningIcon();
+
+  @override
+  State<_PulsingWarningIcon> createState() => _PulsingWarningIconState();
+}
+
+class _PulsingWarningIconState extends State<_PulsingWarningIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        final scale = 1.0 + (_pulseController.value * 0.12);
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppTheme.danger.withAlpha(30),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.danger
+                      .withAlpha((_pulseController.value * 100).toInt()),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.warning_amber_rounded,
+                color: AppTheme.danger, size: 18),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─── Animated Refresh Button ──────────────────────────────────────────────────
+class _AnimatedRefreshButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final bool isMobile;
+
+  const _AnimatedRefreshButton({
+    required this.onPressed,
+    required this.isMobile,
+  });
+
+  @override
+  State<_AnimatedRefreshButton> createState() => _AnimatedRefreshButtonState();
+}
+
+class _AnimatedRefreshButtonState extends State<_AnimatedRefreshButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _rotationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  void _triggerRefresh() {
+    _rotationController.forward(from: 0.0);
+    widget.onPressed();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.isMobile
+        ? IconButton(
+            onPressed: _triggerRefresh,
+            icon: RotationTransition(
+              turns: Tween(begin: 0.0, end: 1.0).animate(_rotationController),
+              child: const Icon(Icons.refresh_rounded,
+                  color: AppTheme.primary, size: 20),
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: AppTheme.primary.withAlpha(20),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.all(8),
+            ),
+          )
+        : OutlinedButton.icon(
+            onPressed: _triggerRefresh,
+            icon: RotationTransition(
+              turns: Tween(begin: 0.0, end: 1.0).animate(_rotationController),
+              child: const Icon(Icons.refresh_rounded, size: 16),
+            ),
+            label: const Text('Refresh'),
+          );
+  }
+}
+
+// ─── Animated Section Card ────────────────────────────────────────────────────
+class _AnimatedSectionCard extends StatefulWidget {
+  final AppSection section;
+  final int productCount;
+  final double totalStock;
+  final bool isLowStock;
+  final List<Product> products;
+  final StockProvider stockProvider;
+  final bool isMobile;
+  final VoidCallback onTap;
+
+  const _AnimatedSectionCard({
+    required this.section,
+    required this.productCount,
+    required this.totalStock,
+    required this.isLowStock,
+    required this.products,
+    required this.stockProvider,
+    required this.isMobile,
+    required this.onTap,
+  });
+
+  @override
+  State<_AnimatedSectionCard> createState() => _AnimatedSectionCardState();
+}
+
+class _AnimatedSectionCardState extends State<_AnimatedSectionCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          margin: widget.isMobile
+              ? const EdgeInsets.only(bottom: 12)
+              : EdgeInsets.zero,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _hovered ? widget.section.color.withAlpha(8) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: widget.section.color.withAlpha(_hovered ? 120 : 40),
+              width: _hovered ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.section.color.withAlpha(_hovered ? 25 : 6),
+                blurRadius: _hovered ? 10 : 3,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: widget.section.color.withAlpha(40),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(
+                      _iconFromString(widget.section.icon),
+                      color: widget.section.color,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.section.name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${widget.productCount} ${widget.productCount == 1 ? 'product' : 'products'}',
+                          style: const TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${widget.totalStock.toStringAsFixed(widget.totalStock % 1 == 0 ? 0 : 1)}',
+                        style: TextStyle(
+                          color: widget.isLowStock
+                              ? AppTheme.danger
+                              : AppTheme.success,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'units',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: widget.isLowStock
+                              ? AppTheme.danger
+                              : AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: widget.section.color.withAlpha(140),
+                  ),
+                ],
+              ),
+              if (widget.products.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Divider(height: 1, color: widget.section.color.withAlpha(30)),
+                const SizedBox(height: 6),
+                ...widget.products.take(3).map((product) {
+                  final stock =
+                      widget.stockProvider.getCurrentStock(product.id!);
+                  final isLow = stock < 10;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: isLow
+                                ? AppTheme.danger
+                                : widget.section.color.withAlpha(150),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} ${product.unit}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                isLow ? AppTheme.danger : AppTheme.textPrimary,
+                          ),
+                        ),
+                        if (isLow) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppTheme.danger.withAlpha(20),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const Text(
+                              'LOW',
+                              style: TextStyle(
+                                color: AppTheme.danger,
+                                fontSize: 7,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+                if (widget.products.length > 3)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '+ ${widget.products.length - 3} more',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: widget.section.color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -1410,6 +1691,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+// ─── Animated Alert Row ───────────────────────────────────────────────────────
+class _AnimatedAlertRow extends StatefulWidget {
+  final Product product;
+  final AppSection section;
+  final double stock;
+
+  const _AnimatedAlertRow({
+    required this.product,
+    required this.section,
+    required this.stock,
+  });
+
+  @override
+  State<_AnimatedAlertRow> createState() => _AnimatedAlertRowState();
+}
+
+class _AnimatedAlertRowState extends State<_AnimatedAlertRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.danger.withAlpha(_hovered ? 15 : 6),
+          borderRadius: BorderRadius.circular(10),
+          border:
+              Border.all(color: AppTheme.danger.withAlpha(_hovered ? 60 : 20)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.product.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.section.name,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withAlpha(25),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${widget.stock.toStringAsFixed(widget.stock % 1 == 0 ? 0 : 1)} ${widget.product.unit}',
+                style: const TextStyle(
+                  color: AppTheme.danger,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Shared Card Container ────────────────────────────────────────────────────
 class _CardContainer extends StatelessWidget {
   final Widget child;
@@ -1425,8 +1787,8 @@ class _CardContainer extends StatelessWidget {
         border: Border.all(color: AppTheme.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
+            color: Colors.black.withAlpha(8),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
@@ -1436,13 +1798,14 @@ class _CardContainer extends StatelessWidget {
   }
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-class _StatCard extends StatelessWidget {
+// ─── Animated Stat Card ──────────────────────────────────────────────────────
+class _StatCard extends StatefulWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color iconColor;
   final Color bgColor;
+  final Gradient accentGradient;
   final String? subtitle;
 
   const _StatCard({
@@ -1451,76 +1814,106 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.bgColor,
+    required this.accentGradient,
     this.subtitle,
   });
 
   @override
+  State<_StatCard> createState() => _StatCardState();
+}
+
+class _StatCardState extends State<_StatCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Colors.white,
-            Color(0xFFEFF6FF), // Soft light blue tint
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              _hovered ? const Color(0xFFF8FAFC) : const Color(0xFFEFF6FF),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _hovered
+                ? widget.iconColor.withAlpha(90)
+                : const Color(0xFFDBEAFE),
+            width: _hovered ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: widget.iconColor.withAlpha(_hovered ? 30 : 12),
+              blurRadius: _hovered ? 10 : 6,
+              offset: const Offset(0, 2),
+            ),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFDBEAFE)), // Soft blue border
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: widget.bgColor,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: _hovered
+                    ? [
+                        BoxShadow(
+                          color: widget.iconColor.withAlpha(50),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        )
+                      ]
+                    : null,
+              ),
+              child: Icon(widget.icon, color: widget.iconColor, size: 22),
             ),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                    height: 1,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textMuted)),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppTheme.textMuted,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    style: TextStyle(
+                      fontSize: _hovered ? 25 : 24,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                      height: 1,
                     ),
+                    child: Text(widget.value),
                   ),
+                  const SizedBox(height: 3),
+                  Text(widget.label,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textMuted)),
+                  if (widget.subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle!,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1550,9 +1943,9 @@ class _ChipBadge extends StatelessWidget {
         vertical: isCompact ? 4 : 6,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withAlpha(20),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withAlpha(50)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1564,7 +1957,7 @@ class _ChipBadge extends StatelessWidget {
             style: TextStyle(
               color: color,
               fontSize: isCompact ? 10 : 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -1620,89 +2013,103 @@ class _PieData {
 }
 
 // ─── Activity Row ─────────────────────────────────────────────────────────────
-class _ActivityRow extends StatelessWidget {
+class _ActivityRow extends StatefulWidget {
   final StockEntry entry;
   const _ActivityRow({required this.entry});
 
   @override
+  State<_ActivityRow> createState() => _ActivityRowState();
+}
+
+class _ActivityRowState extends State<_ActivityRow> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final isIn = entry.type == 'in';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        color: isIn
-            ? AppTheme.success.withOpacity(0.04)
-            : AppTheme.danger.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
+    final isIn = widget.entry.type == 'in';
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
           color: isIn
-              ? AppTheme.success.withOpacity(0.15)
-              : AppTheme.danger.withOpacity(0.15),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color:
-                  (isIn ? AppTheme.success : AppTheme.danger).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              isIn ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-              color: isIn ? AppTheme.success : AppTheme.danger,
-              size: 15,
-            ),
+              ? AppTheme.success.withAlpha(_hovered ? 25 : 10)
+              : AppTheme.danger.withAlpha(_hovered ? 25 : 10),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isIn
+                ? AppTheme.success.withAlpha(_hovered ? 60 : 30)
+                : AppTheme.danger.withAlpha(_hovered ? 60 : 30),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color:
+                    (isIn ? AppTheme.success : AppTheme.danger).withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isIn
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
+                color: isIn ? AppTheme.success : AppTheme.danger,
+                size: 15,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.entry.productName ?? 'Unknown',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    '${widget.entry.sectionName ?? ''} · Bill: ${widget.entry.billNo}',
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  entry.productName ?? 'Unknown',
-                  style: const TextStyle(
+                  '${isIn ? '+' : '-'}${widget.entry.quantity.toStringAsFixed(0)} ${widget.entry.productUnit ?? ''}',
+                  style: TextStyle(
+                    color: isIn ? AppTheme.success : AppTheme.danger,
+                    fontWeight: FontWeight.w800,
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textPrimary,
                   ),
                 ),
                 Text(
-                  '${entry.sectionName ?? ''} · Bill: ${entry.billNo}',
+                  DateFormat('dd/MM').format(widget.entry.date),
                   style:
-                      const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 11),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${isIn ? '+' : '-'}${entry.quantity.toStringAsFixed(0)} ${entry.productUnit ?? ''}',
-                style: TextStyle(
-                  color: isIn ? AppTheme.success : AppTheme.danger,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                DateFormat('dd/MM').format(entry.date),
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 /// Custom ScrollBehavior that allows mouse, stylus, and touch to drag-scroll.
-/// This enables horizontal scrolling in the section summary cards on desktop/web.
 class _AllDeviceScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
