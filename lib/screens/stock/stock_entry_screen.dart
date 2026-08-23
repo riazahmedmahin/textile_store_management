@@ -326,7 +326,11 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
     if (!isIn) {
       final currentStock =
           context.read<StockProvider>().getCurrentStock(widget.product.id!);
-      if (qty > currentStock) {
+      // Handle floating point precision, allow issuing exact stock
+      // Round currentStock to 2 decimal places to avoid floating point noise (e.g. 562.499999999)
+      final safeCurrentStock = double.parse(currentStock.toStringAsFixed(2));
+      final safeQty = double.parse(qty.toStringAsFixed(2));
+      if (safeQty > safeCurrentStock) {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(

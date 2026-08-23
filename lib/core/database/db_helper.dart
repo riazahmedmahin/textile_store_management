@@ -30,11 +30,8 @@ class DatabaseHelper {
     if (section.id == null) {
       data.remove('id');
     }
-    final response = await _supabase
-        .from('sections')
-        .insert(data)
-        .select('id')
-        .single();
+    final response =
+        await _supabase.from('sections').insert(data).select('id').single();
     return response['id'] as int;
   }
 
@@ -47,19 +44,14 @@ class DatabaseHelper {
 
   Future<void> deleteSection(int id) async {
     // Note: Database cascade delete will automatically handle products and stock entries
-    await _supabase
-        .from('sections')
-        .delete()
-        .eq('id', id);
+    await _supabase.from('sections').delete().eq('id', id);
   }
 
   // ─── PRODUCTS ────────────────────────────────────────────────────────────────
 
   Future<List<Product>> getAllProducts() async {
     try {
-      final response = await _supabase
-          .from('products')
-          .select();
+      final response = await _supabase.from('products').select();
       return response.map((m) => Product.fromMap(m)).toList();
     } catch (e) {
       return [];
@@ -84,11 +76,8 @@ class DatabaseHelper {
     if (product.id == null) {
       data.remove('id');
     }
-    final response = await _supabase
-        .from('products')
-        .insert(data)
-        .select('id')
-        .single();
+    final response =
+        await _supabase.from('products').insert(data).select('id').single();
     return response['id'] as int;
   }
 
@@ -101,10 +90,7 @@ class DatabaseHelper {
 
   Future<void> deleteProduct(int id) async {
     // Note: Database cascade delete will handle stock entries
-    await _supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
+    await _supabase.from('products').delete().eq('id', id);
   }
 
   // ─── STOCK ENTRIES ───────────────────────────────────────────────────────────
@@ -120,7 +106,9 @@ class DatabaseHelper {
 
       return response.map((m) {
         final prodMap = m['products'] as Map<String, dynamic>?;
-        final secMap = prodMap != null ? prodMap['sections'] as Map<String, dynamic>? : null;
+        final secMap = prodMap != null
+            ? prodMap['sections'] as Map<String, dynamic>?
+            : null;
         return StockEntry.fromMap({
           ...m,
           'product_name': prodMap?['name'],
@@ -142,9 +130,8 @@ class DatabaseHelper {
     DateTime? toDate,
   }) async {
     try {
-      dynamic query = _supabase
-          .from('stock_entries')
-          .select('*, products(*, sections(*))');
+      dynamic query =
+          _supabase.from('stock_entries').select('*, products(*, sections(*))');
 
       if (productId != null) {
         query = query.eq('product_id', productId);
@@ -153,11 +140,15 @@ class DatabaseHelper {
         query = query.ilike('bill_no', '%${billNo.trim()}%');
       }
       if (fromDate != null) {
-        final startOfFromDate = DateTime(fromDate.year, fromDate.month, fromDate.day).toIso8601String();
+        final startOfFromDate =
+            DateTime(fromDate.year, fromDate.month, fromDate.day)
+                .toIso8601String();
         query = query.gte('date', startOfFromDate);
       }
       if (toDate != null) {
-        final endOfToDate = DateTime(toDate.year, toDate.month, toDate.day, 23, 59, 59).toIso8601String();
+        final endOfToDate =
+            DateTime(toDate.year, toDate.month, toDate.day, 23, 59, 59)
+                .toIso8601String();
         query = query.lte('date', endOfToDate);
       }
 
@@ -167,7 +158,9 @@ class DatabaseHelper {
 
       final list = (response as List).map((m) {
         final prodMap = m['products'] as Map<String, dynamic>?;
-        final secMap = prodMap != null ? prodMap['sections'] as Map<String, dynamic>? : null;
+        final secMap = prodMap != null
+            ? prodMap['sections'] as Map<String, dynamic>?
+            : null;
         return StockEntry.fromMap({
           ...m,
           'product_name': prodMap?['name'],
@@ -200,10 +193,7 @@ class DatabaseHelper {
   }
 
   Future<void> deleteStockEntry(int id) async {
-    await _supabase
-        .from('stock_entries')
-        .delete()
-        .eq('id', id);
+    await _supabase.from('stock_entries').delete().eq('id', id);
   }
 
   Future<void> updateStockEntry(StockEntry entry) async {
@@ -239,7 +229,8 @@ class DatabaseHelper {
   Future<Map<int, Map<String, dynamic>>> getSectionStats() async {
     try {
       final stats = await getDashboardStats();
-      final secStats = stats['section_stats'] as Map<int, Map<String, dynamic>>?;
+      final secStats =
+          stats['section_stats'] as Map<int, Map<String, dynamic>>?;
       return secStats ?? {};
     } catch (e) {
       return {};
@@ -262,7 +253,9 @@ class DatabaseHelper {
 
       final entries = entriesResponse.map((m) {
         final prodMap = m['products'] as Map<String, dynamic>?;
-        final secMap = prodMap != null ? prodMap['sections'] as Map<String, dynamic>? : null;
+        final secMap = prodMap != null
+            ? prodMap['sections'] as Map<String, dynamic>?
+            : null;
         return StockEntry.fromMap({
           ...m,
           'product_name': prodMap?['name'],
@@ -275,17 +268,20 @@ class DatabaseHelper {
       final initialStockSum = products.fold(0.0, (s, p) => s + p.initialStock);
 
       final totalIn = entries
-          .where((e) => e.type == 'in')
-          .fold(0.0, (s, e) => s + e.quantity) + initialStockSum;
+              .where((e) => e.type == 'in')
+              .fold(0.0, (s, e) => s + e.quantity) +
+          initialStockSum;
       final totalOut = entries
           .where((e) => e.type == 'out')
           .fold(0.0, (s, e) => s + e.quantity);
 
       final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
       final todayEntries = entries.where((e) {
-        return e.date.year == now.year &&
-               e.date.month == now.month &&
-               e.date.day == now.day;
+        final d = e.date.toLocal();
+        return d.year == today.year &&
+            d.month == today.month &&
+            d.day == today.day;
       });
 
       final todayIn = todayEntries
@@ -331,7 +327,8 @@ class DatabaseHelper {
       for (final s in sections) {
         if (s.id == null) continue;
         final prods = bySection[s.id!] ?? const [];
-        final totalStock = prods.fold(0.0, (sum, p) => sum + (productStocks[p.id!] ?? 0.0));
+        final totalStock =
+            prods.fold(0.0, (sum, p) => sum + (productStocks[p.id!] ?? 0.0));
         sectionStats[s.id!] = {
           'product_count': prods.length,
           'total_stock': totalStock,
