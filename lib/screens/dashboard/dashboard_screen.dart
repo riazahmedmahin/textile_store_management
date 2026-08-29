@@ -101,7 +101,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       for (final product in products) {
         if (product.id == null) continue;
         final stock = stockProvider.getCurrentStock(product.id!);
-        if (stock < 10) {
+        // stock > 0 && stock < 5 → Low Stock (db_helper এর সাথে মিল রাখা)
+        // stock <= 0 → Out of Stock (আলাদা category)
+        if (stock > 0 && stock < 5) {
           hasLowStock = true;
           break;
         }
@@ -379,7 +381,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           for (final product in products) {
             if (product.id == null) continue;
             final stock = stockProvider.getCurrentStock(product.id!);
-            if (stock < 10) {
+            // শুধু low stock দেখাবো: stock > 0 এবং stock < 5
+            // Out of Stock (stock <= 0) এগুলো এখানে আসবে না
+            if (stock > 0 && stock < 5) {
               lowStockItems.add({
                 'product': product,
                 'section': section,
