@@ -11,6 +11,7 @@ import '../../models/stock_entry.dart';
 import '../../models/product.dart';
 import '../../models/section.dart';
 import '../sections/section_detail_screen.dart';
+import 'out_of_stock_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -362,6 +363,12 @@ class _DashboardScreenState extends State<DashboardScreen>
               bgColor: const Color(0xFFFEF2F2),
               accentGradient: const LinearGradient(
                 colors: [Color(0xFFFB7185), Color(0xFFE11D48)],
+              ),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const OutOfStockScreen(),
+                ),
               ),
             ),
           ],
@@ -1811,6 +1818,7 @@ class _StatCard extends StatefulWidget {
   final Color bgColor;
   final Gradient accentGradient;
   final String? subtitle;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.label,
@@ -1820,6 +1828,7 @@ class _StatCard extends StatefulWidget {
     required this.bgColor,
     required this.accentGradient,
     this.subtitle,
+    this.onTap,
   });
 
   @override
@@ -1831,10 +1840,15 @@ class _StatCardState extends State<_StatCard> {
 
   @override
   Widget build(BuildContext context) {
+    final bool clickable = widget.onTap != null;
     return MouseRegion(
+      cursor:
+          clickable ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.all(16),
@@ -1917,6 +1931,7 @@ class _StatCardState extends State<_StatCard> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
